@@ -1,6 +1,8 @@
 #include "ControllerCom.h"
 #include "ES_Configure.h"
 #include "ES_Framework.h"
+#include <xc.h>
+#include <sys/attribs.h> // keep these includes in for some reason they are needed for  the isr
 
 static volatile uint8_t rxPacket[CONTROLLER_COM_RX_PACKET_SIZE];
 static volatile uint8_t rxIndex = 0;
@@ -53,7 +55,7 @@ bool ControllerCom_InitUART(void){
     RPB14Rbits.RPB14R = 0b0010;
 
     // UART RX: RB5 -> U2RX
-    ANSELBbits.ANSB5 = 0;
+    //ANSELBbits.ANSB5 = 0;
     TRISBbits.TRISB5 = 1;
     U2RXRbits.U2RXR = 0b0001;
 
