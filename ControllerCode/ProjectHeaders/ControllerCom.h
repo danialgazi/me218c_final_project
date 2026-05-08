@@ -32,6 +32,14 @@
 
 #define CONTROLLER_COM_NUM_TEAMS            5
 
+#define CONTROLLER_COM_RX_PACKET_SIZE       10
+
+#define CONTROLLER_COM_RX_LENGTH_MSB        0x00
+#define CONTROLLER_COM_RX_LENGTH_LSB        0x06
+
+#define CONTROLLER_COM_PAIRING_SUCCESS      0xFF
+#define MY_TEAM_INDEX              0
+
 /*******************************************************************************
  * Address Arrays
  ******************************************************************************/
@@ -77,5 +85,9 @@ uint8_t ControllerCom_CalculateChecksum(uint8_t *data, uint8_t length);
 
 void ControllerCom_BuildPacket(ControllerCom_Command_t command,
                                uint8_t *packetOut);
+
+uint8_t ControllerCom_GetLastChargeByte(void);
+
+bool ControllerCom_CheckBoatPacket(uint8_t *packet);
 
 #endif /* CONTROLLER_COM_H */
