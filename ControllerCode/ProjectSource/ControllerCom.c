@@ -1,5 +1,10 @@
 #include "ControllerCom.h"
+#include "ES_Configure.h"
+#include "ES_Framework.h"
 
+static volatile uint8_t rxPacket[CONTROLLER_COM_RX_PACKET_SIZE];
+static volatile uint8_t rxIndex = 0;
+static volatile uint8_t lastChargeByte = 0;
 static volatile uint8_t txPacket[CONTROLLER_COM_TX_PACKET_SIZE];
 static volatile uint8_t txIndex = 0;
 static volatile uint8_t txLength = 0;
@@ -162,13 +167,74 @@ void ControllerCom_SendPairing(uint16_t destinationAddress,
     ControllerCom_SendCommand(command);
 }
 
+bool ControllerCom_CheckBoatPacket(uint8_t *packet)
+{
+    uint8_t sum = 0;
+
+    if (packet[0] != CONTROLLER_COM_START_DELIMITER) {
+        return false;
+    }
+
+    if (packet[1] != CONTROLLER_COM_RX_LENGTH_MSB ||
+        packet[2] != CONTROLLER_COM_RX_LENGTH_LSB) {
+        return false;
+    }
+
+    if (packet[3] != CONTROLLER_COM_API_ID) {
+        return false;
+    }
+
+    if (packet[4] != CONTROLLER_COM_FRAME_ID) {
+        return false;
+    }
+
+    if (packet[7] != CONTROLLER_COM_OPTIONS) {
+        return false;
+    }
+
+    for (uint8_t i = 3; i < CONTROLLER_COM_RX_PACKET_SIZE; i++) {
+        sum += packet[i];
+    }
+
+    return (sum == 0xFF);
+}
+
+static void ControllerCom_ProcessBoatPacket(void)
+{
+    if (ControllerCom_CheckBoatPacket((uint8_t *)rxPacket)) {
+        lastChargeByte = rxPacket[8];
+
+        ES_Event_t event;
+        event.EventType = ES_BOAT_ACK;
+        event.EventParam = lastChargeByte;
+
+        ES_PostAll(event);
+    }
+}
+
+uint8_t ControllerCom_GetLastChargeByte(void)
+{
+    return lastChargeByte;
+}
+
 
 void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
 {
     if (IFS1bits.U2RXIF) {
         while (U2STAbits.URXDA) {
-            receivedByte = U2RXREG;
-            byteReceived = true;
+            uint8_t byte = U2RXREG;
+
+            if (rxIndex == 0 && byte != CONTROLLER_COM_START_DELIMITER) {
+                continue;
+            }
+
+            rxPacket[rxIndex] = byte;
+            rxIndex++;
+
+            if (rxIndex >= CONTROLLER_COM_RX_PACKET_SIZE) {
+                ControllerCom_ProcessBoatPacket();
+                rxIndex = 0;
+            }
         }
 
         if (U2STAbits.OERR) {
@@ -190,5 +256,8 @@ void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
         }
 
         IFS1bits.U2TXIF = 0;
+    }
+    if (U2STAbits.OERR) {
+        U2STAbits.OERR = 0; // just clear the error
     }
 }
