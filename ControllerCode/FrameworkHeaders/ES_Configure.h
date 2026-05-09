@@ -260,8 +260,7 @@ typedef enum
   ES_SHORT_TIMEOUT,         /* signals that a short timer has expired */
   /* User-defined events start here */
   ES_NEW_KEY,               /* signals a new key received from terminal */
-  ES_LOCK,
-  ES_UNLOCK
+  ES_IMU_SHAKE_DETECTED     /* signals that IMU has been shaken above threshold */
 }ES_EventType_t;
 
 /****************************************************************************/
@@ -330,7 +329,7 @@ typedef enum
 // These symbolic names should be changed to be relevant to your application
 
 #define SERVICE0_TIMER 15
-#define AD_INPUTS_TIMER 0
+#define AD_TIMER 0
 
 
 #endif /* ES_CONFIGURE_H */

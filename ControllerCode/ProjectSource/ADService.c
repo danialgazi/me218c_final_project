@@ -33,6 +33,7 @@
 // Analog Pins AN0, AN1, AN4, AN5, AN12, AN11
 #define ANALOG_PINS (BIT0HI | BIT1HI | BIT4HI | BIT5HI | BIT12HI | BIT11HI)
 #define NUM_ANALOG_PINS 7
+#define SHAKE_THRESHOLD 1500000 // TODO: test this value and change it
 //#define POT_PIN (1 << 4)      // pot data pin (RB2 = AN4, so set 4th bit to 1)
 
 /*---------------------------- Module Functions ---------------------------*/
@@ -175,18 +176,33 @@ ES_Event_t RunADService(ES_Event_t ThisEvent)
     joystickX = ResultsArray[0];           // AN0: RVx (Joystick X)
     joystickY = ResultsArray[1];           // AN1: RVy (Joystick Y)
     boatSelectPotVal = ResultsArray[2];    // AN4: Boat Select 
-    accelX = ResultsArray[3];              // AN5: AccelX
-    accelZ = ResultsArray[4];              // AN11: AccelZ (Sorted before 12!)
-    accelY = ResultsArray[5];              // AN12: AccelY
-
+    imuX = ResultsArray[3];                // AN5: AccelX
+    imuZ = ResultsArray[4];                // AN11: AccelZ (sorted before 12)
+    imuY = ResultsArray[5];                // AN12: AccelY
 
     ////DB_printf("Line Sensor Value %u\r\n", (unsigned int)currentPotVal);
 
+    uint32_t currentMagSq = (imuX * imuX) + (imuY * imuY) + (imuZ * imuZ);
+
+    // Debug prints
+    DB_printf("IMU X Value: %u\r\n", imuX);
+    // DB_printf("IMU Y Value: %u\r\n", imuY);
+    // DB_printf("IMU Z Value: %u\r\n", imuZ);
+    // DB_printf("IMU Magnitude Value: %u\r\n", currentMagSq);
+    // DB_printf("Joystick X Value: %u\r\n", joystickX);
+    // DB_printf("Joystick Y Value: %u\r\n", joystickY);
+    // DB_printf("Boat Select Potentiometer Value: %u\r\n", boatSelectPotVal);
+    
+
+    // Only post if IMU crosses the threshold
+    if (currentMagSq > SHAKE_THRESHOLD) {
+        ES_Event_t ShakeEvent;
+        ShakeEvent.EventType = ES_IMU_SHAKE_DETECTED; 
+        // PostControllerStateMachine(ShakeEvent);       // TODO: CHANGE THIS TO REAL SM
+    } 
+
     // Reset timer
     ES_Timer_InitTimer(AD_TIMER, AD_TIMER_PERIOD);
-
-    // Debug print statement
-    // //DB_printf("Current Duty Cycle (pot scaled): %d \n", currentPotVal);
   }
 
   return ReturnEvent;
