@@ -25,6 +25,7 @@
 #include "ES_Configure.h"
 #include "ES_Framework.h"
 #include "ADService.h"
+#include "TestAnalogInputsService.h"
 #include "PIC32_AD_Lib.h"
 #include "dbprintf.h"
 
@@ -32,8 +33,8 @@
 #define AD_TIMER_PERIOD  50   //  50 ms
 // Analog Pins AN0, AN1, AN4, AN5, AN12, AN11
 #define ANALOG_PINS (BIT0HI | BIT1HI | BIT4HI | BIT5HI | BIT12HI | BIT11HI)
-#define NUM_ANALOG_PINS 7
-#define SHAKE_THRESHOLD 1500000 // TODO: test this value and change it
+#define NUM_ANALOG_PINS 6
+#define SHAKE_THRESHOLD 590000 // TODO: test this value and change it
 //#define POT_PIN (1 << 4)      // pot data pin (RB2 = AN4, so set 4th bit to 1)
 
 /*---------------------------- Module Functions ---------------------------*/
@@ -46,7 +47,7 @@ uint32_t getPotVal( void );
 /*---------------------------- Module Variables ---------------------------*/
 // with the introduction of Gen2, we need a module level Priority variable
 static uint8_t MyPriority;
-static uint32_t imuX, imuY, imuZ, potVal, joystickX, joystickY, boatSelectPotVal
+static uint32_t imuX, imuY, imuZ, potVal, joystickX, joystickY, boatSelectPotVal;
 static uint32_t currentPotVal = 0; // out of 1023
 uint32_t ResultsArray[NUM_ANALOG_PINS];   // An array to store ADC_MultiRead vals
 
@@ -91,17 +92,12 @@ bool InitADService(uint8_t Priority)
   //TRISAbits.TRISA1 =  1;    // RB2 to input (pot data pin)
 
   // Configure and enable the ADC using your library function
-  if (!ADC_ConfigAutoScan(BIT1HI)) { // BIT1HI corresponds to AN1
-    //DB_printf("ILLEGAL PIN FOR ADC");
+  if (!ADC_ConfigAutoScan(BIT0HI | BIT1HI | BIT4HI | BIT5HI | BIT11HI | BIT12HI)) {
+    DB_printf("ILLEGAL PIN FOR ADC");
   }
-  
-  ////DB_printf("In Ad Service Test");
   
   // Start AD Timer to keep track of potentiometer polling frequency
   ES_Timer_InitTimer(AD_TIMER, AD_TIMER_PERIOD);
-
-  
-
 
   // post the initial transition event
   ThisEvent.EventType = ES_INIT;
@@ -168,7 +164,7 @@ ES_Event_t RunADService(ES_Event_t ThisEvent)
 
     // Get Current potentiometer value
     uint32_t ResultsArray[NUM_ANALOG_PINS]; 
-    AD1CSSL = ANALOG_PINS;         
+    // AD1CSSL = ANALOG_PINS;         
     ADC_MultiRead(ResultsArray);
     
     // Set current value of each sensor from multiread array contents
@@ -185,10 +181,10 @@ ES_Event_t RunADService(ES_Event_t ThisEvent)
     uint32_t currentMagSq = (imuX * imuX) + (imuY * imuY) + (imuZ * imuZ);
 
     // Debug prints
-    DB_printf("IMU X Value: %u\r\n", imuX);
+    // DB_printf("IMU X Value: %u\r\n", imuX);
     // DB_printf("IMU Y Value: %u\r\n", imuY);
     // DB_printf("IMU Z Value: %u\r\n", imuZ);
-    // DB_printf("IMU Magnitude Value: %u\r\n", currentMagSq);
+    DB_printf("IMU Magnitude Value: %u\r\n", currentMagSq);
     // DB_printf("Joystick X Value: %u\r\n", joystickX);
     // DB_printf("Joystick Y Value: %u\r\n", joystickY);
     // DB_printf("Boat Select Potentiometer Value: %u\r\n", boatSelectPotVal);
@@ -198,11 +194,12 @@ ES_Event_t RunADService(ES_Event_t ThisEvent)
     if (currentMagSq > SHAKE_THRESHOLD) {
         ES_Event_t ShakeEvent;
         ShakeEvent.EventType = ES_IMU_SHAKE_DETECTED; 
-        // PostControllerStateMachine(ShakeEvent);       // TODO: CHANGE THIS TO REAL SM
+        PostTestAnalogInputsService(ShakeEvent);       // TODO: CHANGE THIS TO REAL SM
     } 
 
     // Reset timer
     ES_Timer_InitTimer(AD_TIMER, AD_TIMER_PERIOD);
+    
   }
 
   return ReturnEvent;
