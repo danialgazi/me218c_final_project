@@ -43,6 +43,9 @@
 #include "terminal.h"
 #include "dbprintf.h"
 
+// Neopixel Module
+#include "NeopixelModule.h"
+
 /*----------------------------- Module Defines ----------------------------*/
 // these times assume a 10.000mS/tick timing
 #define ONE_SEC 1000
@@ -111,6 +114,11 @@ bool InitTestHarnessService0(uint8_t Priority)
   DB_printf( "Press 'd' to test event deferral \n\r");
   DB_printf( "Press 'r' to test event recall \n\r");
   DB_printf( "Press 'p' to test posting from an interrupt \n\r");
+  DB_printf( "Press '1' to test LEDS_unpaired \n\r");
+  DB_printf( "Press '2' to test LEDS_pairing \n\r");
+  DB_printf( "Press '3' to test LEDS_GamePlay \n\r");
+  DB_printf( "Press '4' to test LEDS_refueling \n\r");
+  DB_printf( "Press '5' to test LEDS_CommsLost \n\r");
 
   /********************************************
    in here you write your initialization code
@@ -192,20 +200,21 @@ ES_Event_t RunTestHarnessService0(ES_Event_t ThisEvent)
     case ES_INIT:
     {
       ES_Timer_InitTimer(SERVICE0_TIMER, HALF_SEC);
-      puts("Service 00:");
-      DB_printf("\rES_INIT received in Service %d\r\n", MyPriority);
+      NeopixelModule_Init();
+      //puts("Service 00:");
+      //DB_printf("\rES_INIT received in Service %d\r\n", MyPriority);
     }
     break;
     case ES_TIMEOUT:   // re-start timer & announce
     {
       ES_Timer_InitTimer(SERVICE0_TIMER, FIVE_SEC);
-      DB_printf("ES_TIMEOUT received from Timer %d in Service %d\r\n",
-          ThisEvent.EventParam, MyPriority);
+      //DB_printf("ES_TIMEOUT received from Timer %d in Service %d\r\n",
+          //ThisEvent.EventParam, MyPriority);
     }
     break;
     case ES_SHORT_TIMEOUT:   // lower the line & announce
     {
-      puts("\rES_SHORT_TIMEOUT received\r\n");
+      //puts("\rES_SHORT_TIMEOUT received\r\n");
     }
     break;
     case ES_NEW_KEY:   // announce
@@ -217,7 +226,7 @@ ES_Event_t RunTestHarnessService0(ES_Event_t ThisEvent)
         ThisEvent.EventParam = DeferredChar++;   //
         if (ES_DeferEvent(DeferralQueue, ThisEvent))
         {
-          puts("ES_NEW_KEY deferred in Service 0\r");
+          //puts("ES_NEW_KEY deferred in Service 0\r");
         }
       }
       if ('r' == ThisEvent.EventParam)
@@ -227,10 +236,40 @@ ES_Event_t RunTestHarnessService0(ES_Event_t ThisEvent)
         // but we slide the deferred events under it so it(they) should come out first
         if (true == ES_RecallEvents(MyPriority, DeferralQueue))
         {
-          puts("ES_NEW_KEY(s) recalled in Service 0\r");
+          //puts("ES_NEW_KEY(s) recalled in Service 0\r");
           DeferredChar = '1';
         }
       }
+      if ('1' == ThisEvent.EventParam)
+      {
+          DB_printf("In Unpaired \r\n");
+           LEDS_Unpaired();
+      }
+      
+      if ('2' == ThisEvent.EventParam)
+      {
+           LEDS_Pairing();
+      }
+      
+      if ('3' == ThisEvent.EventParam)
+      {
+           LEDS_Gameplay();
+      }
+      
+      if ('4' == ThisEvent.EventParam)
+      {
+           LEDS_Refueling();
+      }
+      
+      if ('5' == ThisEvent.EventParam)
+      {
+           LEDS_CommsLost();
+      }
+      
+      
+      
+            
+      
 #ifdef TEST_INT_POST
       if ('p' == ThisEvent.EventParam)
       {
