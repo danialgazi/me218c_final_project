@@ -34,7 +34,7 @@
 #define REFUEL_PIN          PORTBbits.RB12
 #define PAIR_PIN            PORTBbits.RB13
 
-// Active-low logic
+// Active-high logic
 #define INPUT_ACTIVE        1
 #define INPUT_INACTIVE      1
 
@@ -172,9 +172,10 @@ static void DigitalInput_HWInit(void)
     ANSELBbits.ANSB13 = 0;
     TRISBbits.TRISB13 = 1;
 
-    CNCONBbits.ON = 1;
+    // Set up Interrupt stuff
+    CNCONBbits.ON = 1;      // Turn Change Notice Interrupts on
     
-    CNENBbits.CNIEB11 = 1;
+    CNENBbits.CNIEB11 = 1; 
     CNENBbits.CNIEB12 = 1;
     CNENBbits.CNIEB13 = 1;
 
@@ -209,12 +210,12 @@ static void DigitalInput_PostIfChanged(void)
     {
         LastStableShoot = CurrentShoot;
 
-        if (CurrentShoot == INPUT_ACTIVE)
+        if (CurrentShoot == INPUT_ACTIVE)       // If High
         {
             ShootHeld = true;
             PostCleanEvent(ES_SHOOT_BUTTON_PRESSED);
         }
-        else
+        else        // If Low
         {
             ShootHeld = false;
             PostCleanEvent(ES_SHOOT_BUTTON_RELEASED);
@@ -226,12 +227,12 @@ static void DigitalInput_PostIfChanged(void)
     {
         LastStableRefuel = CurrentRefuel;
 
-        if (CurrentRefuel == INPUT_ACTIVE)
+        if (CurrentRefuel == INPUT_ACTIVE)      // If High
         {
             RefuelOn = true;
             PostCleanEvent(ES_REFUEL_SW_ON);
         }
-        else
+        else    // If Low
         {
             RefuelOn = false;
             PostCleanEvent(ES_REFUEL_SW_OFF);
@@ -243,12 +244,12 @@ static void DigitalInput_PostIfChanged(void)
     {
         LastStablePair = CurrentPair;
 
-        if (CurrentPair == INPUT_ACTIVE)
+        if (CurrentPair == INPUT_ACTIVE)        // If High
         {
             PairHeld = true;
             PostCleanEvent(ES_PAIR_BUTTON_PRESSED);
         }
-        else
+        else    // If Low
         {
             PairHeld = false;
             PostCleanEvent(ES_PAIR_BUTTON_RELEASED);
@@ -258,10 +259,12 @@ static void DigitalInput_PostIfChanged(void)
 
 static void PostCleanEvent(ES_EventType_t EventType)
 {
+    // Create event
     ES_Event_t NewEvent;
     NewEvent.EventType = EventType;
     NewEvent.EventParam = 0;
 
+    // Post Event
     ES_PostAll(NewEvent);
 }
 
@@ -293,10 +296,6 @@ static void DigitalInput_ClearCNFlags(void)
 
    This ISR does NOT post button events directly.
    It only starts debounce.
-
-   NOTE:
-   The vector name _CHANGE_NOTICE_VECTOR is typical for PIC32MX.
-   If your project uses a different vector name, adjust this line.
 */
 void __ISR(_CHANGE_NOTICE_VECTOR, IPL3SOFT) ChangeNoticeISR(void)
 {

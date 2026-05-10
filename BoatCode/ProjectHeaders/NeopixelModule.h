@@ -1,3 +1,8 @@
+/****************************************************************************
+ Template header file for Neopixel Module
+
+ ****************************************************************************/
+
 #ifndef NEOPIXEL_MODULE_H
 #define NEOPIXEL_MODULE_H
 

@@ -1,3 +1,14 @@
+/****************************************************************************
+ Module
+   NeoPixel Module
+
+ Description
+   Higher Level Logic using neopixels, specific to this boat.
+
+ Author
+   Daniel Rullan
+****************************************************************************/
+
 #include "NeopixelModule.h"
 #include "WS2812.h"
 #include <xc.h>
