@@ -35,7 +35,7 @@
 #define PAIR_PIN            PORTBbits.RB13
 
 // Active-low logic
-#define INPUT_ACTIVE        0
+#define INPUT_ACTIVE        1
 #define INPUT_INACTIVE      1
 
 // Debounce time in ms
@@ -70,7 +70,7 @@ static void DigitalInput_EnableCNInterrupts(void);
 static void DigitalInput_DisableCNInterrupts(void);
 static void DigitalInput_ClearCNFlags(void);
 
-static void PostCleanEvent(ES_EventTyp_t EventType);
+static void PostCleanEvent(ES_EventType_t EventType);
 
 /*------------------------------ Module Code ------------------------------*/
 
@@ -161,7 +161,7 @@ bool DigitalInput_IsRefuelOn(void)
 static void DigitalInput_HWInit(void)
 {
     // Shoot button: RB11
-    ANSELBbits.ANSB11 = 0;
+    //ANSELBbits.ANSB11 = 0;
     TRISBbits.TRISB11 = 1;
 
     // Refuel switch: RB12
@@ -172,12 +172,8 @@ static void DigitalInput_HWInit(void)
     ANSELBbits.ANSB13 = 0;
     TRISBbits.TRISB13 = 1;
 
-    /*
-      Enable Change Notice on these pins.
-
-      Depending on your PIC32 header, these bit names are usually CNENBbits.CNIEBxx.
-      If your compiler complains, check the exact CN bit names in the device header.
-    */
+    CNCONBbits.ON = 1;
+    
     CNENBbits.CNIEB11 = 1;
     CNENBbits.CNIEB12 = 1;
     CNENBbits.CNIEB13 = 1;
@@ -260,35 +256,32 @@ static void DigitalInput_PostIfChanged(void)
     }
 }
 
-static void PostCleanEvent(ES_EventTyp_t EventType)
+static void PostCleanEvent(ES_EventType_t EventType)
 {
     ES_Event_t NewEvent;
     NewEvent.EventType = EventType;
     NewEvent.EventParam = 0;
 
-    PostAll(NewEvent);
+    ES_PostAll(NewEvent);
 }
 
 static void DigitalInput_EnableCNInterrupts(void)
 {
-    IFS1CLR = _IFS1_CNIF_MASK;
-    IEC1SET = _IEC1_CNIE_MASK;
+    DigitalInput_ClearCNFlags();
+    IEC1bits.CNBIE = 1;   // Enable Change Notice interrupt for Port B
 }
 
 static void DigitalInput_DisableCNInterrupts(void)
 {
-    IEC1CLR = _IEC1_CNIE_MASK;
+    IEC1bits.CNBIE = 0;   // Disable Change Notice interrupt for Port B
 }
 
 static void DigitalInput_ClearCNFlags(void)
 {
-    /*
-      Reading PORTB helps clear mismatch condition before clearing CNIF.
-    */
     volatile uint32_t dummyRead = PORTB;
     (void)dummyRead;
 
-    IFS1CLR = _IFS1_CNIF_MASK;
+    IFS1bits.CNBIF = 0;   // Clear Change Notice interrupt flag for Port B
 }
 
 /***************************************************************************

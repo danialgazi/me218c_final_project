@@ -199,15 +199,52 @@ ES_Event_t RunTestHarnessService0(ES_Event_t ThisEvent)
     case ES_TIMEOUT:   // re-start timer & announce
     {
       ES_Timer_InitTimer(SERVICE0_TIMER, FIVE_SEC);
-      DB_printf("ES_TIMEOUT received from Timer %d in Service %d\r\n",
-          ThisEvent.EventParam, MyPriority);
+      //DB_printf("ES_TIMEOUT received from Timer %d in Service %d\r\n",
+          //ThisEvent.EventParam, MyPriority);
     }
     break;
     case ES_SHORT_TIMEOUT:   // lower the line & announce
     {
-      puts("\rES_SHORT_TIMEOUT received\r\n");
+      //puts("\rES_SHORT_TIMEOUT received\r\n");
     }
     break;
+    case ES_PAIR_BUTTON_PRESSED:
+    {
+      DB_printf("Pair Button Pressed\r\n");
+    }
+    break;
+    
+    case ES_PAIR_BUTTON_RELEASED:
+    {
+      DB_printf("Pair Button Released\r\n");
+    }
+    break;
+
+    case ES_SHOOT_BUTTON_PRESSED:
+    {
+      DB_printf("Shoot Button Pressed\r\n");
+    }
+    break;
+
+    case ES_SHOOT_BUTTON_RELEASED:
+    {
+      DB_printf("Shoot Button Released\r\n");
+    }
+    break;
+
+    case ES_REFUEL_SW_ON:
+    {
+      DB_printf("Refuel Switch On\r\n");
+    }
+    break;
+
+    case ES_REFUEL_SW_OFF:
+    {
+      DB_printf("REFUEL Switch OFf\r\n");
+    }
+    break;
+ 
+
     case ES_NEW_KEY:   // announce
     {
       DB_printf("ES_NEW_KEY received with -> %c <- in Service 0\r\n",

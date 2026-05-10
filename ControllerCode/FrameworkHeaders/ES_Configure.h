@@ -261,7 +261,16 @@ typedef enum
   /* User-defined events start here */
   ES_NEW_KEY,               /* signals a new key received from terminal */
   ES_LOCK,
-  ES_UNLOCK
+  ES_UNLOCK,
+  
+  /* Events for Digital input Service*/
+  ES_PAIR_BUTTON_PRESSED,
+  ES_PAIR_BUTTON_RELEASED,
+  ES_SHOOT_BUTTON_PRESSED,
+  ES_SHOOT_BUTTON_RELEASED,
+  ES_REFUEL_SW_ON,
+  ES_REFUEL_SW_OFF
+  
 }ES_EventType_t;
 
 /****************************************************************************/
@@ -330,6 +339,6 @@ typedef enum
 // These symbolic names should be changed to be relevant to your application
 
 #define SERVICE0_TIMER 15
-
+#define DIGITAL_INPUT_DEBOUNCE_TIMER 3
 
 #endif /* ES_CONFIGURE_H */
