@@ -184,9 +184,9 @@ ES_Event_t RunADService(ES_Event_t ThisEvent)
     // DB_printf("IMU X Value: %u\r\n", imuX);
     // DB_printf("IMU Y Value: %u\r\n", imuY);
     // DB_printf("IMU Z Value: %u\r\n", imuZ);
-    DB_printf("IMU Magnitude Value: %u\r\n", currentMagSq);
+    // DB_printf("IMU Magnitude Value: %u\r\n", currentMagSq);
     // DB_printf("Joystick X Value: %u\r\n", joystickX);
-    // DB_printf("Joystick Y Value: %u\r\n", joystickY);
+    DB_printf("Joystick Y Value: %u\r\n", joystickY);
     // DB_printf("Boat Select Potentiometer Value: %u\r\n", boatSelectPotVal);
     
 
