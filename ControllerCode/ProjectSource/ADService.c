@@ -34,15 +34,11 @@
 // Analog Pins AN0, AN1, AN4, AN5, AN12, AN11
 #define ANALOG_PINS (BIT0HI | BIT1HI | BIT4HI | BIT5HI | BIT12HI | BIT11HI)
 #define NUM_ANALOG_PINS 6
-#define SHAKE_THRESHOLD 590000 // TODO: test this value and change it
-//#define POT_PIN (1 << 4)      // pot data pin (RB2 = AN4, so set 4th bit to 1)
 
 /*---------------------------- Module Functions ---------------------------*/
 /* prototypes for private functions for this service.They should be functions
    relevant to the behavior of this service
 */
-uint32_t getPotVal( void );
-
 
 /*---------------------------- Module Variables ---------------------------*/
 // with the introduction of Gen2, we need a module level Priority variable
@@ -188,14 +184,6 @@ ES_Event_t RunADService(ES_Event_t ThisEvent)
     // DB_printf("Joystick X Value: %u\r\n", joystickX);
     DB_printf("Joystick Y Value: %u\r\n", joystickY);
     // DB_printf("Boat Select Potentiometer Value: %u\r\n", boatSelectPotVal);
-    
-
-    // Only post if IMU crosses the threshold
-    if (currentMagSq > SHAKE_THRESHOLD) {
-        ES_Event_t ShakeEvent;
-        ShakeEvent.EventType = ES_IMU_SHAKE_DETECTED; 
-        PostTestAnalogInputsService(ShakeEvent);       // TODO: CHANGE THIS TO REAL SM
-    } 
 
     // Reset timer
     ES_Timer_InitTimer(AD_TIMER, AD_TIMER_PERIOD);

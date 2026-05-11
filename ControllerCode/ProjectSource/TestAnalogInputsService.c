@@ -23,7 +23,7 @@
 #include "ES_Configure.h"
 #include "ES_Framework.h"
 #include "TestAnalogInputsService.h"
-
+#include "ThrusterModule.h"
 /*----------------------------- Module Defines ----------------------------*/
 
 /*---------------------------- Module Functions ---------------------------*/
@@ -142,6 +142,9 @@ ES_Event_t RunTestAnalogInputsService(ES_Event_t ThisEvent)
     DB_printf("IMU Shake Detected\r\n");
   }
 
+  uint8_t currentThrustByte = ThrusterModule_GetJoy1();
+  uint8_t currentSteerByte = ThrusterModule_GetJoy2();
+  DB_printf("Joy1 (thrust): %u  Joy2 (steer): %u\r\n", currentThrustByte, currentSteerByte);
 
   return ReturnEvent;
 }
