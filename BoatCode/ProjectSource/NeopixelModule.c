@@ -16,7 +16,7 @@
 
 /*----------------------------- Module Defines ----------------------------*/
 
-#define NUM_LEDS 5
+#define NUM_LEDS 10
 
 // Keep colors dim to reduce current draw.
 // WS2812s can get very bright/current-hungry at full brightness.
@@ -131,8 +131,7 @@ void LEDS_Refueling(void)
 ****************************************************************************/
 void LEDS_CommsLost(void)
 {
-    ShowStaticAlternating(DIM_RED_R, DIM_RED_G, DIM_RED_B,
-                          DIM_PURPLE_R, DIM_PURPLE_G, DIM_PURPLE_B);
+    SetAllLEDs(DIM_PURPLE_R, DIM_PURPLE_G, DIM_PURPLE_B);
 }
 
 /***************************************************************************

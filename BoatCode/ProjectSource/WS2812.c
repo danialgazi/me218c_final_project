@@ -6,18 +6,65 @@
    Bit-banged WS2812 (NeoPixel) driver for PIC32 (cycle-accurate)
 
  Author
-   Ege Turan
+   Ege Turan with some modifications from Daniel
 ****************************************************************************/
 
 #include "WS2812.h"
 #include <xc.h>
 
-#define MAX_LEDS 5
+#define MAX_LEDS 1
 #define WS_PIN LATAbits.LATA4
 #define WS_TRIS TRISAbits.TRISA4
 
 static uint8_t leds_buffer[MAX_LEDS * 3]; // LED data (G,R,B)
 
+
+#define SEND_0_BIT() do {                         \
+    WS_PIN = 1;                                   \
+    __asm__ volatile (                            \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n nop\n nop\n"                 \
+    );                                            \
+    WS_PIN = 0;                                   \
+    __asm__ volatile (                            \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n nop\n nop\n"                 \
+    );                                            \
+} while (0)
+
+#define SEND_1_BIT() do {                         \
+    WS_PIN = 1;                                   \
+    __asm__ volatile (                            \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n nop\n nop\n"                 \
+    );                                            \
+    WS_PIN = 0;                                   \
+    __asm__ volatile (                            \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n nop\n nop\n"                 \
+        "nop\n nop\n"                             \
+    );                                            \
+} while (0)
+
+#define SEND_BYTE(color) do {                                      \
+    uint8_t c = (color);                                           \
+    if (c & 0x80) { SEND_1_BIT(); } else { SEND_0_BIT(); }         \
+    if (c & 0x40) { SEND_1_BIT(); } else { SEND_0_BIT(); }         \
+    if (c & 0x20) { SEND_1_BIT(); } else { SEND_0_BIT(); }         \
+    if (c & 0x10) { SEND_1_BIT(); } else { SEND_0_BIT(); }         \
+    if (c & 0x08) { SEND_1_BIT(); } else { SEND_0_BIT(); }         \
+    if (c & 0x04) { SEND_1_BIT(); } else { SEND_0_BIT(); }         \
+    if (c & 0x02) { SEND_1_BIT(); } else { SEND_0_BIT(); }         \
+    if (c & 0x01) { SEND_1_BIT(); } else { SEND_0_BIT(); }         \
+} while (0)
 /****************************************************************************
 // Initialization
 ****************************************************************************/
@@ -35,53 +82,6 @@ void neopixel_init(void)
 // Caution: blocking code
 // Note: Hard-coded according to oscilloscope measurements. Tested and verified.
 ****************************************************************************/
-static inline void send_bit(uint8_t bit)
-{
-    if (bit)
-    {
-        // '1' bit
-        WS_PIN = 1;
-        __asm__ volatile (
-            "nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n"
-            "nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n"
-            "nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n"
-            "nop\n nop\n nop\n nop\n"
-        ); // ~700ns high
-        WS_PIN = 0;
-        __asm__ volatile (
-            "nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n"
-            "nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n"
-            "nop\n nop\n nop\n nop\n nop\n nop\n"
-        ); // ~600ns low
-    }
-    else
-    {
-        // '0' bit
-        WS_PIN = 1;
-        __asm__ volatile (
-            "nop\n nop\n nop\n nop\n nop\n nop\n nop\n"
-            "nop\n nop\n nop\n nop\n nop\n nop\n"
-        ); // ~350ns high
-        WS_PIN = 0;
-        __asm__ volatile (
-            "nop\n nop\n nop\n nop\n nop\n nop\n nop\n"
-            "nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n"
-            "nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n"
-            "nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n"
-        ); // ~800ns low
-    }
-}
-
-/****************************************************************************
-// Send one color byte (MSB first)
-****************************************************************************/
-static void send_color_byte(uint8_t color)
-{
-    for (int i = 7; i >= 0; i--)
-    {
-        send_bit((color >> i) & 0x1);
-    }
-}
 
 /****************************************************************************
 // Update LEDs
@@ -92,17 +92,18 @@ void neopixel_show(void)
 
     for (int i = 0; i < MAX_LEDS; i++)
     {
-        send_color_byte(leds_buffer[i*3 + 0]); // G
-        send_color_byte(leds_buffer[i*3 + 1]); // R
-        send_color_byte(leds_buffer[i*3 + 2]); // B
+        SEND_BYTE(leds_buffer[i*3 + 0]); // G
+        SEND_BYTE(leds_buffer[i*3 + 1]); // R
+        SEND_BYTE(leds_buffer[i*3 + 2]); // B
     }
 
     __builtin_enable_interrupts();
 
     // Reset >50us
     WS_PIN = 0;
-    for (volatile int i = 0; i < 2000; i++) __asm__ volatile ("nop");
-
+    for (volatile int i = 0; i < 2000; i++) {
+        __asm__ volatile ("nop");
+    }
 }
 
 /****************************************************************************
