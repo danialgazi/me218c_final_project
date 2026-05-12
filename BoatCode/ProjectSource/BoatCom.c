@@ -110,7 +110,7 @@ bool BoatCom_CheckControllerPacket(uint8_t *packet)
     uint8_t sum = 0;
     uint16_t sourceAddress;
 
-    DB_printf("CHK start\r\n");
+//    DB_printf("CHK start\r\n");
 
     if (packet[0] != BOAT_COM_START_DELIMITER) {
         DB_printf("BAD start %d\r\n", packet[0]);
@@ -130,22 +130,22 @@ bool BoatCom_CheckControllerPacket(uint8_t *packet)
 
     sourceAddress = ((uint16_t)packet[4] << 8) | packet[5];
 
-    DB_printf("src %d\r\n", sourceAddress);
-    DB_printf("rssi %d\r\n", packet[6]);
-    DB_printf("opts %d\r\n", packet[7]);
+//    DB_printf("src %d\r\n", sourceAddress);
+//    DB_printf("rssi %d\r\n", packet[6]);
+//    DB_printf("opts %d\r\n", packet[7]);
 
     for (uint8_t i = 3; i < BOAT_COM_RX_PACKET_SIZE; i++) {
         sum += packet[i];
     }
 
-    DB_printf("sum %d\r\n", sum);
+//    DB_printf("sum %d\r\n", sum);
 
     if (sum != 255) {
         DB_printf("BAD sum\r\n");
         return false;
     }
 
-    DB_printf("CHK good\r\n");
+//    DB_printf("CHK good\r\n");
     return true;
 }
 
@@ -153,7 +153,7 @@ static void BoatCom_ProcessControllerPacket(void)
 {
     ES_Event_t event;
 
-    DB_printf("PROC pkt\r\n");
+//    DB_printf("PROC pkt\r\n");
 
     if (BoatCom_CheckControllerPacket((uint8_t *)rxPacket)) {
         latestCommand.statusByte = rxPacket[8];
@@ -161,10 +161,10 @@ static void BoatCom_ProcessControllerPacket(void)
         latestCommand.joy2Byte = rxPacket[10];
         latestCommand.digiByte = rxPacket[11];
 
-        DB_printf("status %d\r\n", latestCommand.statusByte);
-        DB_printf("joy1 %d\r\n", latestCommand.joy1Byte);
-        DB_printf("joy2 %d\r\n", latestCommand.joy2Byte);
-        DB_printf("digi %d\r\n", latestCommand.digiByte);
+//        DB_printf("status %d\r\n", latestCommand.statusByte);
+//        DB_printf("joy1 %d\r\n", latestCommand.joy1Byte);
+//        DB_printf("joy2 %d\r\n", latestCommand.joy2Byte);
+//        DB_printf("digi %d\r\n", latestCommand.digiByte);
 
         switch (latestCommand.statusByte) {
             case BOAT_COM_STATUS_PAIRING:
@@ -172,14 +172,14 @@ static void BoatCom_ProcessControllerPacket(void)
                     ((uint16_t)latestCommand.joy1Byte << 8) |
                     latestCommand.joy2Byte;
 
-                DB_printf("pair addr %d\r\n",
-                          latestCommand.sourceMallardAddress);
+//                DB_printf("pair addr %d\r\n",
+//                          latestCommand.sourceMallardAddress);
 
                 event.EventType = ES_PAIRING_COMMAND;
                 event.EventParam = latestCommand.sourceMallardAddress;
                 ES_PostAll(event);
 
-                DB_printf("post pair\r\n");
+//                DB_printf("post pair\r\n");
                 break;
 
             case BOAT_COM_STATUS_CHARGING:
@@ -187,7 +187,7 @@ static void BoatCom_ProcessControllerPacket(void)
                 event.EventParam = 0;
                 ES_PostAll(event);
 
-                DB_printf("post charge\r\n");
+//                DB_printf("post charge\r\n");
                 break;
 
             case BOAT_COM_STATUS_DRIVING:
@@ -195,15 +195,15 @@ static void BoatCom_ProcessControllerPacket(void)
                 event.EventParam = 0;
                 ES_PostAll(event);
 
-                DB_printf("post drive\r\n");
+//                DB_printf("post drive\r\n");
                 break;
 
             default:
-                DB_printf("bad status %d\r\n", latestCommand.statusByte);
+//                DB_printf("bad status %d\r\n", latestCommand.statusByte);
                 break;
         }
     } else {
-        DB_printf("PROC bad\r\n");
+//        DB_printf("PROC bad\r\n");
     }
 }
 
@@ -248,31 +248,31 @@ void BoatCom_SendTestAck(void)
 void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
 {
     if (IFS1bits.U2RXIF) {
-        DB_printf("RX int\r\n");
+//        DB_printf("RX int\r\n");
 
         while (U2STAbits.URXDA) {
             uint8_t byte = U2RXREG;
 
-            DB_printf("b %d\r\n", byte);
-            DB_printf("i %d\r\n", rxIndex);
+//            DB_printf("b %d\r\n", byte);
+//            DB_printf("i %d\r\n", rxIndex);
 
             if (byte == BOAT_COM_START_DELIMITER) {
-                DB_printf("start\r\n");
+//                DB_printf("start\r\n");
                 rxIndex = 0;
             }
 
             if (rxIndex == 0 && byte != BOAT_COM_START_DELIMITER) {
-                DB_printf("skip\r\n");
+//                DB_printf("skip\r\n");
                 continue;
             }
 
             rxPacket[rxIndex] = byte;
             rxIndex++;
 
-            DB_printf("ni %d\r\n", rxIndex);
+//            DB_printf("ni %d\r\n", rxIndex);
 
             if (rxIndex >= BOAT_COM_RX_PACKET_SIZE) {
-                DB_printf("full\r\n");
+//                DB_printf("full\r\n");
                 BoatCom_ProcessControllerPacket();
                 rxIndex = 0;
             }
@@ -291,10 +291,10 @@ void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
     }
 
     if (IFS1bits.U2TXIF && IEC1bits.U2TXIE) {
-        DB_printf("TX int\r\n");
+//        DB_printf("TX int\r\n");
 
         while (!U2STAbits.UTXBF && txIndex < txLength) {
-            DB_printf("tx %d\r\n", txPacket[txIndex]);
+//            DB_printf("tx %d\r\n", txPacket[txIndex]);
             U2TXREG = txPacket[txIndex];
             txIndex++;
         }
@@ -302,7 +302,7 @@ void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
         if (txIndex >= txLength) {
             IEC1bits.U2TXIE = 0;
             txBusy = false;
-            DB_printf("TX done\r\n");
+//            DB_printf("TX done\r\n");
         }
 
         IFS1bits.U2TXIF = 0;

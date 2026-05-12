@@ -174,7 +174,7 @@ bool ControllerCom_CheckBoatPacket(uint8_t *packet)
     uint8_t sum = 0;
     uint16_t sourceAddress;
 
-    DB_printf("CHK boat\r\n");
+//    DB_printf("CHK boat\r\n");
 
     if (packet[0] != CONTROLLER_COM_START_DELIMITER) {
         DB_printf("BAD start %d\r\n", packet[0]);
@@ -193,34 +193,34 @@ bool ControllerCom_CheckBoatPacket(uint8_t *packet)
     }
 
     sourceAddress = ((uint16_t)packet[4] << 8) | packet[5];
-
-    DB_printf("src %d\r\n", sourceAddress);
-    DB_printf("rssi %d\r\n", packet[6]);
-    DB_printf("opts %d\r\n", packet[7]);
+//
+//    DB_printf("src %d\r\n", sourceAddress);
+//    DB_printf("rssi %d\r\n", packet[6]);
+//    DB_printf("opts %d\r\n", packet[7]);
 
     for (uint8_t i = 3; i < CONTROLLER_COM_RX_PACKET_SIZE; i++) {
         sum += packet[i];
     }
 
-    DB_printf("sum %d\r\n", sum);
+//    DB_printf("sum %d\r\n", sum);
 
     if (sum != 255) {
         DB_printf("BAD sum\r\n");
         return false;
     }
 
-    DB_printf("CHK good\r\n");
+//    DB_printf("CHK good\r\n");
     return true;
 }
 
 static void ControllerCom_ProcessBoatPacket(void)
 {
-    DB_printf("PROC boat\r\n");
+//    DB_printf("PROC boat\r\n");
 
     if (ControllerCom_CheckBoatPacket((uint8_t *)rxPacket)) {
         lastChargeByte = rxPacket[8];
 
-        DB_printf("ack %d\r\n", lastChargeByte);
+//        DB_printf("ack %d\r\n", lastChargeByte);
 
         ES_Event_t event;
         event.EventType = ES_BOAT_ACK;
@@ -228,7 +228,7 @@ static void ControllerCom_ProcessBoatPacket(void)
 
         ES_PostAll(event);
 
-        DB_printf("post ack\r\n");
+//        DB_printf("post ack\r\n");
     } else {
         DB_printf("PROC bad\r\n");
     }
@@ -242,31 +242,31 @@ uint8_t ControllerCom_GetLastChargeByte(void)
 void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
 {
     if (IFS1bits.U2RXIF) {
-        DB_printf("RX int\r\n");
+//        DB_printf("RX int\r\n");
 
         while (U2STAbits.URXDA) {
             uint8_t byte = U2RXREG;
 
-            DB_printf("b %d\r\n", byte);
-            DB_printf("i %d\r\n", rxIndex);
+//            DB_printf("b %d\r\n", byte);
+//            DB_printf("i %d\r\n", rxIndex);
 
             if (byte == CONTROLLER_COM_START_DELIMITER) {
-                DB_printf("start\r\n");
+//                DB_printf("start\r\n");
                 rxIndex = 0;
             }
 
             if (rxIndex == 0 && byte != CONTROLLER_COM_START_DELIMITER) {
-                DB_printf("skip\r\n");
+//                DB_printf("skip\r\n");
                 continue;
             }
 
             rxPacket[rxIndex] = byte;
             rxIndex++;
 
-            DB_printf("ni %d\r\n", rxIndex);
+//            DB_printf("ni %d\r\n", rxIndex);
 
             if (rxIndex >= CONTROLLER_COM_RX_PACKET_SIZE) {
-                DB_printf("full\r\n");
+//                DB_printf("full\r\n");
                 ControllerCom_ProcessBoatPacket();
                 rxIndex = 0;
             }
