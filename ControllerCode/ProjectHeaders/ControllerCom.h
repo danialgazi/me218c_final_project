@@ -34,6 +34,8 @@
 
 #define CONTROLLER_COM_RX_PACKET_SIZE       10
 
+#define CONTROLLER_COM_RX_API_ID        0x81
+
 #define CONTROLLER_COM_RX_LENGTH_MSB        0x00
 #define CONTROLLER_COM_RX_LENGTH_LSB        0x06
 

@@ -14,6 +14,8 @@
 #define BOAT_COM_RX_LENGTH_MSB         0x00
 #define BOAT_COM_RX_LENGTH_LSB         0x09
 
+#define BOAT_COM_RX_API_ID             0x81
+
 #define BOAT_COM_TX_LENGTH_MSB         0x00
 #define BOAT_COM_TX_LENGTH_LSB         0x06
 
@@ -29,7 +31,7 @@
 
 #define BOAT_COM_NUM_TEAMS             5
 
-#define MY_TEAM_INDEX                  0
+#define MY_TEAM_INDEX                  2
 
 extern const uint16_t QuackraftAddresses[BOAT_COM_NUM_TEAMS];
 extern const uint16_t MallardAddresses[BOAT_COM_NUM_TEAMS];

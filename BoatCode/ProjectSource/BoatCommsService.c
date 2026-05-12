@@ -12,16 +12,12 @@
 
 #define TEST_QUACKRAFT_ADDRESS     0x2083
 #define TEST_MALLARD_ADDRESS       0x2183
-#define TEST_CHARGE_BYTE           0xFF
+#define TEST_CHARGE_BYTE           0x55
 
 /*---------------------------- Module Variables ---------------------------*/
 
 static uint8_t MyPriority;
 static uint16_t PairedMallardAddress = TEST_MALLARD_ADDRESS;
-
-/*---------------------------- Private Functions --------------------------*/
-
-static void HandleControllerPacket(void);
 
 /*------------------------------ Module Code ------------------------------*/
 
@@ -67,23 +63,76 @@ ES_Event_t RunBoatCommsService(ES_Event_t ThisEvent)
             DB_printf("--------------------------------\r\n");
             break;
 
-        case ES_CONTROLLER_PACKET:
-            DB_printf("\r\nBoat received valid controller packet\r\n");
-            HandleControllerPacket();
+        case ES_PAIRING_COMMAND:
+            PairedMallardAddress = ThisEvent.EventParam;
+
+            DB_printf("\r\nPAIRING event received\r\n");
+            DB_printf("Mallard address param: %d\r\n", PairedMallardAddress);
+
+            if (PairedMallardAddress == TEST_MALLARD_ADDRESS) {
+                DB_printf("Address matches expected controller\r\n");
+            } else {
+                DB_printf("Unexpected controller address\r\n");
+            }
+
+            DB_printf("Sending pairing ACK: %d\r\n", BOAT_COM_PAIRING_SUCCESS);
+            BoatCom_SendAck(PairedMallardAddress, BOAT_COM_PAIRING_SUCCESS);
             break;
+
+        case ES_CHARGING_COMMAND:
+            DB_printf("\r\nCHARGING event received\r\n");
+            DB_printf("ACK to Mallard: %d\r\n", PairedMallardAddress);
+            BoatCom_SendAck(PairedMallardAddress, TEST_CHARGE_BYTE);
+            break;
+
+        case ES_DRIVING_COMMAND:
+        {
+            BoatCom_Command_t command = BoatCom_GetLatestCommand();
+
+            DB_printf("\r\nDRIVING event received\r\n");
+            DB_printf("Joy1: %d\r\n", command.joy1Byte);
+            DB_printf("Joy2: %d\r\n", command.joy2Byte);
+            DB_printf("Digi: %d\r\n", command.digiByte);
+
+            if (command.joy1Byte == BOAT_COM_JOY_CENTER &&
+                command.joy2Byte == BOAT_COM_JOY_CENTER &&
+                command.digiByte == 0) {
+                DB_printf("Action: idle\r\n");
+            } else if (command.joy1Byte > BOAT_COM_JOY_CENTER) {
+                DB_printf("Action: forward\r\n");
+            } else if (command.joy1Byte < BOAT_COM_JOY_CENTER) {
+                DB_printf("Action: backward\r\n");
+            } else if (command.joy2Byte > BOAT_COM_JOY_CENTER) {
+                DB_printf("Action: right\r\n");
+            } else if (command.joy2Byte < BOAT_COM_JOY_CENTER) {
+                DB_printf("Action: left\r\n");
+            }
+
+            if (command.digiByte & 0x01) {
+                DB_printf("Collect bit set\r\n");
+            }
+
+            if (command.digiByte & 0x02) {
+                DB_printf("Smack bit set\r\n");
+            }
+
+            DB_printf("Sending drive ACK to %d\r\n", PairedMallardAddress);
+            BoatCom_SendAck(PairedMallardAddress, TEST_CHARGE_BYTE);
+            break;
+        }
 
         case ES_NEW_KEY:
         {
             char key = (char)ThisEvent.EventParam;
 
             if (key == 't') {
-                DB_printf("\r\nForce sending ACK to controller\r\n");
-                DB_printf("  Destination controller: %d\r\n", TEST_MALLARD_ADDRESS);
-                DB_printf("  ACK byte: %d\r\n", TEST_CHARGE_BYTE);
+                DB_printf("\r\nForce sending ACK\r\n");
+                DB_printf("Dest controller: %d\r\n", TEST_MALLARD_ADDRESS);
+                DB_printf("ACK byte: %d\r\n", TEST_CHARGE_BYTE);
 
                 BoatCom_SendAck(TEST_MALLARD_ADDRESS, TEST_CHARGE_BYTE);
             } else {
-                DB_printf("\r\nUnknown boat test key: %c\r\n", key);
+                DB_printf("\r\nUnknown key: %c\r\n", key);
                 DB_printf("Use t to force ACK\r\n");
             }
 
@@ -95,85 +144,4 @@ ES_Event_t RunBoatCommsService(ES_Event_t ThisEvent)
     }
 
     return ReturnEvent;
-}
-
-
-/***************************************************************************
- private functions
- ***************************************************************************/
-
-static void HandleControllerPacket(void)
-{
-    BoatCom_Command_t command = BoatCom_GetLatestCommand();
-
-    DB_printf("Packet fields:\r\n");
-    DB_printf("  Status: %d\r\n", command.statusByte);
-    DB_printf("  Joy1:    (%u)\r\n", command.joy1Byte);
-    DB_printf("  Joy2:   (%u)\r\n", command.joy2Byte);
-    DB_printf("  Digi:   %d\r\n", command.digiByte);
-
-    switch (command.statusByte) {
-        case BOAT_COM_STATUS_PAIRING:
-            PairedMallardAddress = command.sourceMallardAddress;
-
-            DB_printf("Decoded command: PAIRING\r\n");
-            DB_printf("  Controller address from packet: %d\r\n",
-                      PairedMallardAddress);
-
-            if (PairedMallardAddress == TEST_MALLARD_ADDRESS) {
-                DB_printf("  Address matches expected controller\r\n");
-            } else {
-                DB_printf("  WARNING: unexpected controller address\r\n");
-            }
-
-            DB_printf("  Sending pairing ACK: %d\r\n",
-                      BOAT_COM_PAIRING_SUCCESS);
-
-            BoatCom_SendAck(PairedMallardAddress, BOAT_COM_PAIRING_SUCCESS);
-            break;
-
-        case BOAT_COM_STATUS_DRIVING:
-            DB_printf("Decoded command: DRIVING\r\n");
-
-            if (command.joy1Byte == BOAT_COM_JOY_CENTER &&
-                command.joy2Byte == BOAT_COM_JOY_CENTER &&
-                command.digiByte == 0x00) {
-                DB_printf("  Boat action: IDLE / STOP\r\n");
-            } else if (command.joy1Byte > BOAT_COM_JOY_CENTER) {
-                DB_printf("  Boat action: DRIVING FORWARD\r\n");
-            } else if (command.joy1Byte < BOAT_COM_JOY_CENTER) {
-                DB_printf("  Boat action: DRIVING BACKWARD\r\n");
-            } else if (command.joy2Byte > BOAT_COM_JOY_CENTER) {
-                DB_printf("  Boat action: TURNING RIGHT\r\n");
-            } else if (command.joy2Byte < BOAT_COM_JOY_CENTER) {
-                DB_printf("  Boat action: TURNING LEFT\r\n");
-            }
-
-            if (command.digiByte & 0x01) {
-                DB_printf("  Button action: COLLECT bit set\r\n");
-            }
-
-            if (command.digiByte & 0x02) {
-                DB_printf("  Button action: SMACK bit set\r\n");
-            }
-
-            DB_printf("  Sending driving ACK to %dX\r\n",
-                      PairedMallardAddress);
-
-            BoatCom_SendAck(PairedMallardAddress, TEST_CHARGE_BYTE);
-            break;
-
-        case BOAT_COM_STATUS_CHARGING:
-            DB_printf("Decoded command: CHARGING\r\n");
-            DB_printf("  Sending charge ACK to %d\r\n",
-                      PairedMallardAddress);
-
-            BoatCom_SendAck(PairedMallardAddress, TEST_CHARGE_BYTE);
-            break;
-
-        default:
-            DB_printf("Unknown command status: %d\r\n",
-                      command.statusByte);
-            break;
-    }
 }

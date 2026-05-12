@@ -107,62 +107,103 @@ uint8_t BoatCom_CalculateChecksum(uint8_t *data, uint8_t length)
 
 bool BoatCom_CheckControllerPacket(uint8_t *packet)
 {
-    return true; // testing for now - I don't actually know if we need all this debugging
     uint8_t sum = 0;
-    uint16_t destinationAddress;
+    uint16_t sourceAddress;
+
+    DB_printf("CHK start\r\n");
 
     if (packet[0] != BOAT_COM_START_DELIMITER) {
+        DB_printf("BAD start %d\r\n", packet[0]);
         return false;
     }
 
     if (packet[1] != BOAT_COM_RX_LENGTH_MSB ||
         packet[2] != BOAT_COM_RX_LENGTH_LSB) {
+        DB_printf("BAD len %d %d\r\n", packet[1], packet[2]);
         return false;
     }
 
-    if (packet[3] != BOAT_COM_API_ID) {
+    if (packet[3] != BOAT_COM_RX_API_ID) {
+        DB_printf("BAD api %d\r\n", packet[3]);
         return false;
     }
 
-    if (packet[4] != BOAT_COM_FRAME_ID) {
-        return false;
-    }
+    sourceAddress = ((uint16_t)packet[4] << 8) | packet[5];
 
-    destinationAddress = ((uint16_t)packet[5] << 8) | packet[6];
-
-    if (destinationAddress != QuackraftAddresses[MY_TEAM_INDEX]) {
-        return false;
-    }
-
-    if (packet[7] != BOAT_COM_OPTIONS) {
-        return false;
-    }
+    DB_printf("src %d\r\n", sourceAddress);
+    DB_printf("rssi %d\r\n", packet[6]);
+    DB_printf("opts %d\r\n", packet[7]);
 
     for (uint8_t i = 3; i < BOAT_COM_RX_PACKET_SIZE; i++) {
         sum += packet[i];
     }
 
-    return (sum == 0xFF);
-}
+    DB_printf("sum %d\r\n", sum);
 
+    if (sum != 255) {
+        DB_printf("BAD sum\r\n");
+        return false;
+    }
+
+    DB_printf("CHK good\r\n");
+    return true;
+}
 
 static void BoatCom_ProcessControllerPacket(void)
 {
+    ES_Event_t event;
+
+    DB_printf("PROC pkt\r\n");
+
     if (BoatCom_CheckControllerPacket((uint8_t *)rxPacket)) {
         latestCommand.statusByte = rxPacket[8];
         latestCommand.joy1Byte = rxPacket[9];
         latestCommand.joy2Byte = rxPacket[10];
         latestCommand.digiByte = rxPacket[11];
 
-        if (latestCommand.statusByte == BOAT_COM_STATUS_PAIRING) {
-            latestCommand.sourceMallardAddress =
-                ((uint16_t)latestCommand.joy1Byte << 8) | latestCommand.joy2Byte;
-        }
+        DB_printf("status %d\r\n", latestCommand.statusByte);
+        DB_printf("joy1 %d\r\n", latestCommand.joy1Byte);
+        DB_printf("joy2 %d\r\n", latestCommand.joy2Byte);
+        DB_printf("digi %d\r\n", latestCommand.digiByte);
 
-        ES_Event_t event;
-        event.EventType = ES_CONTROLLER_PACKET;
-        event.EventParam = latestCommand.statusByte;
-        ES_PostAll(event);
+        switch (latestCommand.statusByte) {
+            case BOAT_COM_STATUS_PAIRING:
+                latestCommand.sourceMallardAddress =
+                    ((uint16_t)latestCommand.joy1Byte << 8) |
+                    latestCommand.joy2Byte;
+
+                DB_printf("pair addr %d\r\n",
+                          latestCommand.sourceMallardAddress);
+
+                event.EventType = ES_PAIRING_COMMAND;
+                event.EventParam = latestCommand.sourceMallardAddress;
+                ES_PostAll(event);
+
+                DB_printf("post pair\r\n");
+                break;
+
+            case BOAT_COM_STATUS_CHARGING:
+                event.EventType = ES_CHARGING_COMMAND;
+                event.EventParam = 0;
+                ES_PostAll(event);
+
+                DB_printf("post charge\r\n");
+                break;
+
+            case BOAT_COM_STATUS_DRIVING:
+                event.EventType = ES_DRIVING_COMMAND;
+                event.EventParam = 0;
+                ES_PostAll(event);
+
+                DB_printf("post drive\r\n");
+                break;
+
+            default:
+                DB_printf("bad status %d\r\n", latestCommand.statusByte);
+                break;
+        }
+    } else {
+        DB_printf("PROC bad\r\n");
     }
 }
 
@@ -206,42 +247,54 @@ void BoatCom_SendTestAck(void)
 
 void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
 {
-    if (IFS1bits.U2RXIF) { // I actually think the if statement needs to be on the inside - since 
-        // the interrupt needs to trigger multiple times to build the full command
-        // steps for tomorrow - hook it up to the logic analyzer, do some print statements in the isr
-        // to verify we are building the right command (I think we are getting lost in our
-        // error checking) and then verify the command is built correct
-        DB_printf("we got an intterupt in the register!");
+    if (IFS1bits.U2RXIF) {
+        DB_printf("RX int\r\n");
+
         while (U2STAbits.URXDA) {
             uint8_t byte = U2RXREG;
 
+            DB_printf("b %d\r\n", byte);
+            DB_printf("i %d\r\n", rxIndex);
+
             if (byte == BOAT_COM_START_DELIMITER) {
+                DB_printf("start\r\n");
                 rxIndex = 0;
             }
 
             if (rxIndex == 0 && byte != BOAT_COM_START_DELIMITER) {
+                DB_printf("skip\r\n");
                 continue;
             }
 
             rxPacket[rxIndex] = byte;
             rxIndex++;
 
+            DB_printf("ni %d\r\n", rxIndex);
 
-        }
-        if (rxIndex >= 9) {
+            if (rxIndex >= BOAT_COM_RX_PACKET_SIZE) {
+                DB_printf("full\r\n");
                 BoatCom_ProcessControllerPacket();
                 rxIndex = 0;
             }
+        }
 
         if (U2STAbits.OERR) {
+            DB_printf("OERR\r\n");
             U2STAbits.OERR = 0;
+        }
+
+        if (U2STAbits.FERR) {
+            DB_printf("FERR\r\n");
         }
 
         IFS1bits.U2RXIF = 0;
     }
 
     if (IFS1bits.U2TXIF && IEC1bits.U2TXIE) {
+        DB_printf("TX int\r\n");
+
         while (!U2STAbits.UTXBF && txIndex < txLength) {
+            DB_printf("tx %d\r\n", txPacket[txIndex]);
             U2TXREG = txPacket[txIndex];
             txIndex++;
         }
@@ -249,6 +302,7 @@ void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
         if (txIndex >= txLength) {
             IEC1bits.U2TXIE = 0;
             txBusy = false;
+            DB_printf("TX done\r\n");
         }
 
         IFS1bits.U2TXIF = 0;
