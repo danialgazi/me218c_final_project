@@ -46,6 +46,7 @@
       <itemPath>ProjectHeaders/TestHarnessService0.h</itemPath>
       <itemPath>ProjectHeaders/BoatCom.h</itemPath>
       <itemPath>ProjectHeaders/BoatCommsService.h</itemPath>
+      <itemPath>ProjectHeaders/ThrusterControl.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -64,6 +65,7 @@
       <itemPath>ProjectSource/main.c</itemPath>
       <itemPath>ProjectSource/BoatCom.c</itemPath>
       <itemPath>ProjectSource/BoatCommsService.c</itemPath>
+      <itemPath>ProjectSource/ThrusterControl.c</itemPath>
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>
@@ -82,7 +84,7 @@
         <targetPluginBoard></targetPluginBoard>
         <platformTool>snap</platformTool>
         <languageToolchain>XC32</languageToolchain>
-        <languageToolchainVersion>4.10</languageToolchainVersion>
+        <languageToolchainVersion>5.00</languageToolchainVersion>
         <platform>3</platform>
       </toolsSet>
       <packs>
