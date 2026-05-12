@@ -34,6 +34,13 @@ const uint16_t MallardAddresses[BOAT_COM_NUM_TEAMS] = {
 bool BoatCom_InitUART(void)
 {
     U2MODEbits.UARTEN = 0;
+    
+    U2STAbits.OERR = 0;
+        volatile uint8_t dummy;
+
+        while (U2STAbits.URXDA) {
+            dummy = U2RXREG;
+        }
 
     // UART TX: RB14 -> U2TX
     ANSELBbits.ANSB14 = 0;
@@ -41,9 +48,9 @@ bool BoatCom_InitUART(void)
     RPB14Rbits.RPB14R = 0b0010;
 
     // UART RX: RB5 -> U2RX
-//    ANSELBbits.ANSB5 = 0;
+//    ANSELBbits.ANSB5 = 0; it has no analog functionality
     TRISBbits.TRISB5 = 1;
-    U2RXRbits.U2RXR = 0b0001;
+    U2RXRbits.U2RXR = 0b0001; // double checked
 
     U2MODEbits.STSEL = 0;
     U2MODEbits.PDSEL = 0;
@@ -66,6 +73,7 @@ bool BoatCom_InitUART(void)
     U2MODEbits.UARTEN = 1;
 
     IEC1bits.U2RXIE = 1;
+    __builtin_enable_interrupts();
 
     return true;
 }
@@ -99,6 +107,7 @@ uint8_t BoatCom_CalculateChecksum(uint8_t *data, uint8_t length)
 
 bool BoatCom_CheckControllerPacket(uint8_t *packet)
 {
+    return true; // testing for now - I don't actually know if we need all this debugging
     uint8_t sum = 0;
     uint16_t destinationAddress;
 
@@ -197,7 +206,12 @@ void BoatCom_SendTestAck(void)
 
 void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
 {
-    if (IFS1bits.U2RXIF) {
+    if (IFS1bits.U2RXIF) { // I actually think the if statement needs to be on the inside - since 
+        // the interrupt needs to trigger multiple times to build the full command
+        // steps for tomorrow - hook it up to the logic analyzer, do some print statements in the isr
+        // to verify we are building the right command (I think we are getting lost in our
+        // error checking) and then verify the command is built correct
+        DB_printf("we got an intterupt in the register!");
         while (U2STAbits.URXDA) {
             uint8_t byte = U2RXREG;
 
@@ -212,11 +226,12 @@ void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
             rxPacket[rxIndex] = byte;
             rxIndex++;
 
-            if (rxIndex >= BOAT_COM_RX_PACKET_SIZE) {
+
+        }
+        if (rxIndex >= 9) {
                 BoatCom_ProcessControllerPacket();
                 rxIndex = 0;
             }
-        }
 
         if (U2STAbits.OERR) {
             U2STAbits.OERR = 0;

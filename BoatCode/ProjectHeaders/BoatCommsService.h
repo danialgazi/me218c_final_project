@@ -8,7 +8,10 @@
 #ifndef BoatCommsService_H
 #define BoatCommsService_H
 
+
 #include "ES_Types.h"
+
+#define BOAT_COM_JOY_CENTER  127
 
 // Public Function Prototypes
 

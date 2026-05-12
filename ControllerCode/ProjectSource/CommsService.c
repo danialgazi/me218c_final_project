@@ -10,172 +10,141 @@
 
 /*----------------------------- Module Defines ----------------------------*/
 
-#define DEFAULT_TEAM_INDEX   0
+#define TEST_QUACKRAFT_ADDRESS     0x2083
+#define TEST_MALLARD_ADDRESS       0x2183
 
 /*---------------------------- Module Variables ---------------------------*/
 
 static uint8_t MyPriority;
 
-static uint8_t CurrentTeamIndex = DEFAULT_TEAM_INDEX;
-static uint8_t CurrentJoy1 = CONTROLLER_COM_JOY_CENTER;
-static uint8_t CurrentJoy2 = CONTROLLER_COM_JOY_CENTER;
-static uint8_t CurrentDigi = 0x00;
-
-/*---------------------------- Private Functions --------------------------*/
-
-static void SendCurrentDriveCommand(void);
-static void SetIdleCommand(void);
-
 /*------------------------------ Module Code ------------------------------*/
 
 bool InitCommsService(uint8_t Priority)
 {
-  ES_Event_t ThisEvent;
+    ES_Event_t ThisEvent;
 
-  MyPriority = Priority;
+    MyPriority = Priority;
 
-  ControllerCom_InitUART();
+    DB_printf("\r\n--- Controller Comms Test Init ---\r\n");
 
-  CurrentTeamIndex = DEFAULT_TEAM_INDEX;
-  SetIdleCommand();
+    if (ControllerCom_InitUART()) {
+        DB_printf("Controller UART initialized\r\n");
+    } else {
+        DB_printf("Controller UART init FAILED\r\n");
+    }
 
-  ThisEvent.EventType = ES_INIT;
-  return ES_PostToService(MyPriority, ThisEvent);
+    DB_printf("Target boat address: %d\r\n", TEST_QUACKRAFT_ADDRESS);
+    DB_printf("This controller address: %d\r\n", TEST_MALLARD_ADDRESS);
+
+    ThisEvent.EventType = ES_INIT;
+    return ES_PostToService(MyPriority, ThisEvent);
 }
 
 
 bool PostCommsService(ES_Event_t ThisEvent)
 {
-  return ES_PostToService(MyPriority, ThisEvent);
+    return ES_PostToService(MyPriority, ThisEvent);
 }
 
 
 ES_Event_t RunCommsService(ES_Event_t ThisEvent)
 {
-  ES_Event_t ReturnEvent;
-  ReturnEvent.EventType = ES_NO_EVENT;
+    ES_Event_t ReturnEvent;
+    ReturnEvent.EventType = ES_NO_EVENT;
 
-  switch (ThisEvent.EventType) {
-    case ES_INIT:
-      ControllerCom_SendIdle(QuackraftAddresses[CurrentTeamIndex]);
-      break;
+    switch (ThisEvent.EventType) {
+        case ES_INIT:
+            DB_printf("\r\nController controls:\r\n");
+            DB_printf("  p = send pairing packet\r\n");
+            DB_printf("  w = drive forward\r\n");
+            DB_printf("  s = drive backward\r\n");
+            DB_printf("  a = turn left\r\n");
+            DB_printf("  d = turn right\r\n");
+            DB_printf("  x = idle / stop\r\n");
+            DB_printf("  c = send charging packet\r\n");
+            DB_printf("--------------------------------\r\n");
+            break;
 
-    case ES_NEW_KEY:
-    {
-      char key = (char)ThisEvent.EventParam;
+        case ES_NEW_KEY:
+        {
+            char key = (char)ThisEvent.EventParam;
 
-      switch (key) {
-        case '1':
-          CurrentTeamIndex = 0;
-          break;
+            DB_printf("\r\nController key: %c\r\n", key);
 
-        case '2':
-          CurrentTeamIndex = 1;
-          break;
+            switch (key) {
+                case 'p':
+                    DB_printf("Sending PAIRING packet\r\n");
+                    DB_printf("  Test boat: %d\r\n", TEST_QUACKRAFT_ADDRESS);
+                    DB_printf("  Source controller: %d\r\n", TEST_MALLARD_ADDRESS);
 
-        case '3':
-          CurrentTeamIndex = 2;
-          break;
+                    ControllerCom_SendPairing(TEST_QUACKRAFT_ADDRESS,
+                                              TEST_MALLARD_ADDRESS);
+                    break;
 
-        case '4':
-          CurrentTeamIndex = 3;
-          break;
+                case 'w':
+                    DB_printf("Sending DRIVING packet: FORWARD\r\n");
+                    ControllerCom_SendDriving(TEST_QUACKRAFT_ADDRESS,
+                                              CONTROLLER_COM_JOY_MAX,
+                                              CONTROLLER_COM_JOY_CENTER,
+                                              0x00);
+                    break;
 
-        case '5':
-          CurrentTeamIndex = 4;
-          break;
+                case 's':
+                    DB_printf("Sending DRIVING packet: BACKWARD\r\n");
+                    ControllerCom_SendDriving(TEST_QUACKRAFT_ADDRESS,
+                                              CONTROLLER_COM_JOY_MIN,
+                                              CONTROLLER_COM_JOY_CENTER,
+                                              0x00);
+                    break;
 
-        case 'w':
-          CurrentJoy1 = CONTROLLER_COM_JOY_MAX;
-          CurrentJoy2 = CONTROLLER_COM_JOY_CENTER;
-          CurrentDigi = 0x00;
-          SendCurrentDriveCommand();
-          break;
+                case 'a':
+                    DB_printf("Sending DRIVING packet: LEFT\r\n");
+                    ControllerCom_SendDriving(TEST_QUACKRAFT_ADDRESS,
+                                              CONTROLLER_COM_JOY_CENTER,
+                                              CONTROLLER_COM_JOY_MIN,
+                                              0x00);
+                    break;
 
-        case 's':
-          CurrentJoy1 = CONTROLLER_COM_JOY_MIN;
-          CurrentJoy2 = CONTROLLER_COM_JOY_CENTER;
-          CurrentDigi = 0x00;
-          SendCurrentDriveCommand();
-          break;
+                case 'd':
+                    DB_printf("Sending DRIVING packet: RIGHT\r\n");
+                    ControllerCom_SendDriving(TEST_QUACKRAFT_ADDRESS,
+                                              CONTROLLER_COM_JOY_CENTER,
+                                              CONTROLLER_COM_JOY_MAX,
+                                              0x00);
+                    break;
 
-        case 'a':
-          CurrentJoy1 = CONTROLLER_COM_JOY_CENTER;
-          CurrentJoy2 = CONTROLLER_COM_JOY_MIN;
-          CurrentDigi = 0x00;
-          SendCurrentDriveCommand();
-          break;
+                case 'x':
+                    DB_printf("Sending IDLE packet\r\n");
+                    ControllerCom_SendIdle(TEST_QUACKRAFT_ADDRESS);
+                    break;
 
-        case 'd':
-          CurrentJoy1 = CONTROLLER_COM_JOY_CENTER;
-          CurrentJoy2 = CONTROLLER_COM_JOY_MAX;
-          CurrentDigi = 0x00;
-          SendCurrentDriveCommand();
-          break;
+                case 'c':
+                    DB_printf("Sending CHARGING packet\r\n");
+                    ControllerCom_SendCharging(TEST_QUACKRAFT_ADDRESS);
+                    break;
 
-        case 'x':
-          SetIdleCommand();
-          ControllerCom_SendIdle(QuackraftAddresses[CurrentTeamIndex]);
-          break;
+                default:
+                    DB_printf("Unknown key. Use p, w, s, a, d, x, c\r\n");
+                    break;
+            }
 
-        case 'c':
-          ControllerCom_SendCharging(QuackraftAddresses[CurrentTeamIndex]);
-          break;
+            break;
+        }
 
-        case 'p':
-          ControllerCom_SendPairing(QuackraftAddresses[CurrentTeamIndex],
-                                    MallardAddresses[MY_TEAM_INDEX]);
-          break;
+        case ES_BOAT_ACK:
+            DB_printf("\r\nController received BOAT ACK\r\n");
+            DB_printf("  Charge/ACK byte: %d (%u)\r\n",
+                      ThisEvent.EventParam,
+                      ThisEvent.EventParam);
 
-        case 'q':
-          CurrentJoy1 = CONTROLLER_COM_JOY_CENTER;
-          CurrentJoy2 = CONTROLLER_COM_JOY_CENTER;
-          CurrentDigi = CONTROLLER_COM_BUTTON_COLLECT;
-          SendCurrentDriveCommand();
-          break;
-
-        case 'e':
-          CurrentJoy1 = CONTROLLER_COM_JOY_CENTER;
-          CurrentJoy2 = CONTROLLER_COM_JOY_CENTER;
-          CurrentDigi = CONTROLLER_COM_BUTTON_SMACK;
-          SendCurrentDriveCommand();
-          break;
+            if (ThisEvent.EventParam == CONTROLLER_COM_PAIRING_SUCCESS) {
+                DB_printf("  Pairing success byte received\r\n");
+            }
+            break;
 
         default:
-          break;
-      }
-
-      break;
+            break;
     }
 
-    case ES_BOAT_ACK:
-      DB_printf("Boat ACK / charge byte: 0x%02X\r\n", ThisEvent.EventParam);
-      break;
-
-    default:
-      break;
-  }
-
-  return ReturnEvent;
-}
-
-
-/***************************************************************************
- private functions
- ***************************************************************************/
-
-static void SendCurrentDriveCommand(void)
-{
-  ControllerCom_SendDriving(QuackraftAddresses[CurrentTeamIndex],
-                            CurrentJoy1,
-                            CurrentJoy2,
-                            CurrentDigi);
-}
-
-
-static void SetIdleCommand(void)
-{
-  CurrentJoy1 = CONTROLLER_COM_JOY_CENTER;
-  CurrentJoy2 = CONTROLLER_COM_JOY_CENTER;
-  CurrentDigi = 0x00;
+    return ReturnEvent;
 }
