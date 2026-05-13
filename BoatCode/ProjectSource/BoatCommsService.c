@@ -7,11 +7,12 @@
 #include "ES_Framework.h"
 #include "BoatCommsService.h"
 #include "BoatCom.h"
+#include "ThrusterControl.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 
-#define TEST_QUACKRAFT_ADDRESS     0x2083
-#define TEST_MALLARD_ADDRESS       0x2183
+#define TEST_QUACKRAFT_ADDRESS     0x2084
+#define TEST_MALLARD_ADDRESS       0x2184
 #define TEST_CHARGE_BYTE           0x55
 
 /*---------------------------- Module Variables ---------------------------*/
@@ -34,6 +35,11 @@ bool InitBoatCommsService(uint8_t Priority)
     } else {
         DB_printf("Boat UART init FAILED\r\n");
     }
+
+    ThrusterControl_Init();
+    ThrusterControl_SetThrust(BOAT_COM_JOY_CENTER, BOAT_COM_JOY_CENTER);
+
+    DB_printf("Thruster control initialized\r\n");
 
     PairedMallardAddress = TEST_MALLARD_ADDRESS;
 
@@ -60,6 +66,7 @@ ES_Event_t RunBoatCommsService(ES_Event_t ThisEvent)
         case ES_INIT:
             DB_printf("\r\nBoat controls:\r\n");
             DB_printf("  t = force ACK to controller %d\r\n", TEST_MALLARD_ADDRESS);
+            DB_printf("  x = force thrusters idle\r\n");
             DB_printf("--------------------------------\r\n");
             break;
 
@@ -75,12 +82,18 @@ ES_Event_t RunBoatCommsService(ES_Event_t ThisEvent)
                 DB_printf("Unexpected controller address\r\n");
             }
 
+            ThrusterControl_SetThrust(BOAT_COM_JOY_CENTER, BOAT_COM_JOY_CENTER);
+
             DB_printf("Sending pairing ACK: %d\r\n", BOAT_COM_PAIRING_SUCCESS);
             BoatCom_SendAck(PairedMallardAddress, BOAT_COM_PAIRING_SUCCESS);
             break;
 
         case ES_CHARGING_COMMAND:
             DB_printf("\r\nCHARGING event received\r\n");
+
+            ThrusterControl_SetThrust(BOAT_COM_JOY_CENTER, BOAT_COM_JOY_CENTER);
+            DB_printf("Thrusters set idle for charging\r\n");
+
             DB_printf("ACK to Mallard: %d\r\n", PairedMallardAddress);
             BoatCom_SendAck(PairedMallardAddress, TEST_CHARGE_BYTE);
             break;
@@ -93,6 +106,8 @@ ES_Event_t RunBoatCommsService(ES_Event_t ThisEvent)
             DB_printf("Joy1: %d\r\n", command.joy1Byte);
             DB_printf("Joy2: %d\r\n", command.joy2Byte);
             DB_printf("Digi: %d\r\n", command.digiByte);
+
+            ThrusterControl_SetThrust(command.joy2Byte, command.joy1Byte);
 
             if (command.joy1Byte == BOAT_COM_JOY_CENTER &&
                 command.joy2Byte == BOAT_COM_JOY_CENTER &&
@@ -107,6 +122,8 @@ ES_Event_t RunBoatCommsService(ES_Event_t ThisEvent)
             } else if (command.joy2Byte < BOAT_COM_JOY_CENTER) {
                 DB_printf("Action: left\r\n");
             }
+
+            DB_printf("Thruster command sent\r\n");
 
             if (command.digiByte & 0x01) {
                 DB_printf("Collect bit set\r\n");
@@ -131,9 +148,13 @@ ES_Event_t RunBoatCommsService(ES_Event_t ThisEvent)
                 DB_printf("ACK byte: %d\r\n", TEST_CHARGE_BYTE);
 
                 BoatCom_SendAck(TEST_MALLARD_ADDRESS, TEST_CHARGE_BYTE);
+            } else if (key == 'x') {
+                DB_printf("\r\nForce thrusters idle\r\n");
+                ThrusterControl_SetThrust(BOAT_COM_JOY_CENTER,
+                                          BOAT_COM_JOY_CENTER);
             } else {
                 DB_printf("\r\nUnknown key: %c\r\n", key);
-                DB_printf("Use t to force ACK\r\n");
+                DB_printf("Use t for ACK, x for idle\r\n");
             }
 
             break;
