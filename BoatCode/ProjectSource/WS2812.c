@@ -124,3 +124,4 @@ void neopixel_clear(void)
 {
     for (int i = 0; i < MAX_LEDS*3; i++) leds_buffer[i] = 0;
 }
+
