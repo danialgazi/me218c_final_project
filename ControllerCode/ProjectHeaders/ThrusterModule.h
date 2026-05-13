@@ -13,9 +13,11 @@
 #include <stdbool.h>
 
 // Public Function Prototypes
-
-void ThrusterModule_EncodeThrusterPower(void);   // call periodically to encode thruster power
 uint8_t ThrusterModule_GetJoy1(void);            // Public getter fxn for joystick1 data
 uint8_t ThrusterModule_GetJoy2(void);            // Public getter fxn for joystick2 data
+
+// --------------------------------------------------
+// Private Function Prototypes
+void ThrusterModule_EncodeThrusterPower(void);   // call periodically to encode thruster power
 
 #endif /* ThrusterModule_H */

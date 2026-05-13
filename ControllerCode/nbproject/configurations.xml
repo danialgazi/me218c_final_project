@@ -51,6 +51,8 @@
       <itemPath>ProjectHeaders/TemplateService.h</itemPath>
       <itemPath>ProjectHeaders/TestAnalogInputsService.h</itemPath>
       <itemPath>ProjectHeaders/TopHSMTemplate.h</itemPath>
+      <itemPath>ProjectHeaders/IMUModule.h</itemPath>
+      <itemPath>ProjectHeaders/ThrusterModule.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -75,6 +77,8 @@
       <itemPath>ProjectSource/TemplateService.c</itemPath>
       <itemPath>ProjectSource/TestAnalogInputsService.c</itemPath>
       <itemPath>ProjectSource/TopHSMTemplate.c</itemPath>
+      <itemPath>ProjectSource/IMUModule.c</itemPath>
+      <itemPath>ProjectSource/ThrusterModule.c</itemPath>
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>
@@ -299,6 +303,20 @@
         <property key="wpo-lto" value="false"/>
       </C32Global>
       <item path="ProjectSource/HSMTemplateMain.c" ex="true" overriding="false">
+        <C32>
+        </C32>
+        <C32-AR>
+        </C32-AR>
+        <C32-AS>
+        </C32-AS>
+        <C32-CO>
+        </C32-CO>
+        <C32-LD>
+        </C32-LD>
+        <C32CPP>
+        </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectSource/main.c" ex="false" overriding="false">
         <C32>
@@ -846,6 +864,8 @@
                   value="${memories.instruction.ram.ranges}"/>
         <property key="memories.programmemory" value="true"/>
         <property key="memories.programmemory.ranges" value="1d000000-1d03ffff"/>
+        <property key="programmerToGoFilePath"
+                  value="/Users/danialgazi/Desktop/Stanford/Year 6 - Post-Tesla Quarters/ME 218 - Mechatronics/ME218 Repositories/ME218C_Final_Project/ControllerCode/debug/default/default_ptg"/>
         <property key="programoptions.donoteraseauxmem" value="false"/>
         <property key="programoptions.eraseb4program" value="true"/>
         <property key="programoptions.pgmentry.voltage" value="low"/>
