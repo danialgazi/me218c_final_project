@@ -142,8 +142,8 @@ ES_Event_t RunTestAnalogInputsService(ES_Event_t ThisEvent)
     DB_printf("IMU Shake Detected\r\n");
   }
 
-  uint8_t currentThrustByte = ThrusterModule_GetJoy1();
-  uint8_t currentSteerByte = ThrusterModule_GetJoy2();
+  uint8_t currentThrustByte = getJoystickY();
+  uint8_t currentSteerByte = getJoystickX();
   DB_printf("Joy1 (thrust): %u  Joy2 (steer): %u\r\n", currentThrustByte, currentSteerByte);
 
   return ReturnEvent;

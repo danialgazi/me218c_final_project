@@ -2,127 +2,80 @@
  Module
    ADService.c
 
- Revision
-   1.0.1
-
  Description
-   This service reads and converts analog to digital. Taken from the Events
-   and Services Template file.
-
- Notes
-
- History
- When           Who     What/Why
- -------------- ---     --------
- 01/16/12 09:58 jec      began conversion from TemplateFSM.c
- 01/13/26 21:50 DA       start of file for lab5. pseudo code to first draft
- 01/20/26 23:00 DA       adaptation to lab6 (PWM and DC motor driving)
+   Service for reading analog inputs using PIC32_AD_Lib auto-scan mode.
 ****************************************************************************/
+
 /*----------------------------- Include Files -----------------------------*/
-/* include header files for this state machine as well as any machines at the
-   next lower level in the hierarchy that are sub-machines to this machine
-*/
 #include "ES_Configure.h"
 #include "ES_Framework.h"
 #include "ADService.h"
-#include "TestAnalogInputsService.h"
 #include "PIC32_AD_Lib.h"
 #include "dbprintf.h"
+#include <stdint.h>
+#include <stdbool.h>
 
 /*----------------------------- Module Defines ----------------------------*/
-#define AD_TIMER_PERIOD  50   //  50 ms
-// Analog Pins AN0, AN1, AN4, AN5, AN12, AN11
-#define ANALOG_PINS (BIT0HI | BIT1HI | BIT4HI | BIT5HI | BIT12HI | BIT11HI)
-#define NUM_ANALOG_PINS 6
+
+#define AD_TIMER_PERIOD  50   // ms
+
+// Analog channels being scanned:
+// AN0  = joystick X
+// AN1  = joystick Y
+// AN4  = boat select potentiometer
+// AN5  = IMU X
+// AN11 = IMU Z
+// AN12 = IMU Y
+#define ANALOG_PINS       (BIT0HI | BIT1HI | BIT4HI | BIT5HI | BIT11HI | BIT12HI)
+#define NUM_ANALOG_PINS   6
 
 /*---------------------------- Module Functions ---------------------------*/
-/* prototypes for private functions for this service.They should be functions
-   relevant to the behavior of this service
-*/
+
+static void initAD(void);
 
 /*---------------------------- Module Variables ---------------------------*/
-// with the introduction of Gen2, we need a module level Priority variable
-static uint8_t MyPriority;
-static uint32_t imuX, imuY, imuZ, potVal, joystickX, joystickY, boatSelectPotVal;
-static uint32_t currentPotVal = 0; // out of 1023
-uint32_t ResultsArray[NUM_ANALOG_PINS];   // An array to store ADC_MultiRead vals
 
-// Results array should be size = number of analog channels
+static uint8_t MyPriority;
+
+static uint32_t ResultsArray[NUM_ANALOG_PINS];
+
+static uint32_t joystickX;
+static uint32_t joystickY;
+static uint32_t boatSelectPotVal;
+static uint32_t imuX;
+static uint32_t imuY;
+static uint32_t imuZ;
 
 /*------------------------------ Module Code ------------------------------*/
+
 /****************************************************************************
  Function
-     InitADService
-
- Parameters
-     uint8_t : the priorty of this service
-
- Returns
-     bool, false if error in initialization, true otherwise
+   InitADService
 
  Description
-     Saves away the priority, and does any
-     other required initialization for this service
- Notes
-
- Author
-     Daniel Algazi, 1/13/2026, 21:51
+   Initializes the AD service.
 ****************************************************************************/
 bool InitADService(uint8_t Priority)
 {
   ES_Event_t ThisEvent;
 
   MyPriority = Priority;
-  /********************************************
-   in here you write your initialization code
-   *******************************************/
 
-  // AD Configure
-  //ADC_ConfigAutoScan(POT_PIN);  // Configure pot data pin for analog
+  initAD();
 
-  
-  // Set pins to digital/analog
-  //ANSELAbits.ANSA1 = 1;     // RB2 (AN4) to analog (pot data pin)
-
-  // Set pins to input/output
-  //TRISAbits.TRISA1 =  1;    // RB2 to input (pot data pin)
-
-  // Configure and enable the ADC using your library function
-  if (!ADC_ConfigAutoScan(BIT0HI | BIT1HI | BIT4HI | BIT5HI | BIT11HI | BIT12HI)) {
-    DB_printf("ILLEGAL PIN FOR ADC");
-  }
-  
-  // Start AD Timer to keep track of potentiometer polling frequency
   ES_Timer_InitTimer(AD_TIMER, AD_TIMER_PERIOD);
 
-  // post the initial transition event
   ThisEvent.EventType = ES_INIT;
-  if (ES_PostToService(MyPriority, ThisEvent) == true)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
+
+  return ES_PostToService(MyPriority, ThisEvent);
 }
 
 /****************************************************************************
  Function
-     PostADService
-
- Parameters
-     EF_Event_t ThisEvent ,the event to post to the queue
-
- Returns
-     bool false if the Enqueue operation failed, true otherwise
+   PostADService
 
  Description
-     Posts an event to this state machine's queue
- Notes
-
- Author
-     Daniel Algazi, 1/13/2026, 21:51
+   Posts events to this service.
 ****************************************************************************/
 bool PostADService(ES_Event_t ThisEvent)
 {
@@ -131,84 +84,127 @@ bool PostADService(ES_Event_t ThisEvent)
 
 /****************************************************************************
  Function
-    RunADService
-
- Parameters
-   ES_Event_t : the event to process
-
- Returns
-   ES_Event, ES_NO_EVENT if no error ES_ERROR otherwise
+   RunADService
 
  Description
-   add your description here
- Notes
-
- Author
-     Daniel Algazi, 1/13/2026, 21:51
+   Periodically reads the latest ADC scan results and stores them in named
+   module-level variables.
 ****************************************************************************/
 ES_Event_t RunADService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent;
-  ReturnEvent.EventType = ES_NO_EVENT; // assume no errors
-  /********************************************
-   in here you write your service code
-   *******************************************/
-  // //DB_printf("RunADService: ES_TIMOUT \n");
+  ReturnEvent.EventType = ES_NO_EVENT;
 
-  // Check if AD Timer elapsed
-  if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == AD_TIMER) {
-
-    // Get Current potentiometer value
-    uint32_t ResultsArray[NUM_ANALOG_PINS]; 
-    // AD1CSSL = ANALOG_PINS;         
+  if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == AD_TIMER))
+  {
     ADC_MultiRead(ResultsArray);
-    
-    // Set current value of each sensor from multiread array contents
-    // Map the numerically sorted results to the controller variables
-    joystickX = ResultsArray[0];           // AN0: RVx (Joystick X)
-    joystickY = ResultsArray[1];           // AN1: RVy (Joystick Y)
-    boatSelectPotVal = ResultsArray[2];    // AN4: Boat Select 
-    imuX = ResultsArray[3];                // AN5: AccelX
-    imuZ = ResultsArray[4];                // AN11: AccelZ (sorted before 12)
-    imuY = ResultsArray[5];                // AN12: AccelY
 
-    ////DB_printf("Line Sensor Value %u\r\n", (unsigned int)currentPotVal);
+    // ADC_MultiRead returns values in increasing analog channel order:
+    // AN0, AN1, AN4, AN5, AN11, AN12
+    joystickX        = ResultsArray[0];   // AN0
+    joystickY        = ResultsArray[1];   // AN1
+    boatSelectPotVal = ResultsArray[2];   // AN4
+    imuX             = ResultsArray[3];   // AN5
+    imuZ             = ResultsArray[4];   // AN11
+    imuY             = ResultsArray[5];   // AN12
 
-    uint32_t currentMagSq = (imuX * imuX) + (imuY * imuY) + (imuZ * imuZ);
+    // Optional debug print
+    // DB_printf("Joystick X: %u\r\n", joystickX);
+    // DB_printf("Joystick Y: %u\r\n", joystickY);
+    // DB_printf("Boat Select: %u\r\n", boatSelectPotVal);
+    // DB_printf("IMU X: %u\r\n", imuX);
+    // DB_printf("IMU Y: %u\r\n", imuY);
+    // DB_printf("IMU Z: %u\r\n", imuZ);
 
-    // Debug prints
-    // DB_printf("IMU X Value: %u\r\n", imuX);
-    // DB_printf("IMU Y Value: %u\r\n", imuY);
-    // DB_printf("IMU Z Value: %u\r\n", imuZ);
-    // DB_printf("IMU Magnitude Value: %u\r\n", currentMagSq);
-    // DB_printf("Joystick X Value: %u\r\n", joystickX);
-    DB_printf("Joystick Y Value: %u\r\n", joystickY);
-    // DB_printf("Boat Select Potentiometer Value: %u\r\n", boatSelectPotVal);
-
-    // Reset timer
     ES_Timer_InitTimer(AD_TIMER, AD_TIMER_PERIOD);
-    
   }
 
   return ReturnEvent;
 }
 
-/*
-  These functions let you access the analog input data from the controller
-  as values from 0-1023
-*/
-uint32_t getIMUX(void) { return imuX; }
-uint32_t getIMUY(void) { return imuY; }
-uint32_t getIMUZ(void) { return imuZ; }
-uint32_t getJoystickX(void) { return joystickX; }
-uint32_t getJoystickY(void) { return joystickY; }
-uint32_t getBoatSelectVal(void) { return boatSelectPotVal; }
+/****************************************************************************
+ Getter Functions
 
+ Description
+   Return the most recently stored analog values.
+****************************************************************************/
+
+uint32_t getIMUX(void)
+{
+  return imuX;
+}
+
+uint32_t getIMUY(void)
+{
+  return imuY;
+}
+
+uint32_t getIMUZ(void)
+{
+  return imuZ;
+}
+
+uint32_t getJoystickX(void)
+{
+  return joystickX;
+}
+
+uint32_t getJoystickY(void)
+{
+  return joystickY;
+}
+
+uint32_t getBoatSelectVal(void)
+{
+  return boatSelectPotVal;
+}
+
+uint8_t ADC10ToByte(uint32_t adcVal)
+{
+    uint8_t value;
+
+    if (adcVal > 1023) {
+        adcVal = 1023;
+    }
+
+    value = (uint8_t)(adcVal >> 2);
+
+    if (value == 0x7E) {
+        value = 0x7F;
+    }
+
+    return value;
+}
 
 /***************************************************************************
- private functions
+ Private Functions
  ***************************************************************************/
 
-/*------------------------------- Footnotes -------------------------------*/
-/*------------------------------ End of file ------------------------------*/
+static void initAD(void)
+{
+  // Set pins to analog mode
+  ANSELAbits.ANSA0 = 1;    // AN0, joystick X
+  ANSELAbits.ANSA1 = 1;    // AN1, joystick Y
+  ANSELBbits.ANSB2 = 1;    // AN4, boat select
+  ANSELBbits.ANSB3 = 1;    // AN5, IMU X
+  ANSELBbits.ANSB13 = 1;   // AN11, IMU Z
+  ANSELBbits.ANSB12 = 1;   // AN12, IMU Y
 
+  // Set pins as inputs
+  TRISAbits.TRISA0 = 1;    // AN0, joystick X
+  TRISAbits.TRISA1 = 1;    // AN1, joystick Y
+  TRISBbits.TRISB2 = 1;    // AN4, boat select
+  TRISBbits.TRISB3 = 1;    // AN5, IMU X
+  TRISBbits.TRISB13 = 1;   // AN11, IMU Z
+  TRISBbits.TRISB12 = 1;   // AN12, IMU Y
+
+  // Configure ADC auto-scan
+  if (!ADC_ConfigAutoScan(ANALOG_PINS))
+  {
+    DB_printf("ERROR: ADC_ConfigAutoScan failed\r\n");
+  }
+}
+
+
+
+/*------------------------------ End of file ------------------------------*/

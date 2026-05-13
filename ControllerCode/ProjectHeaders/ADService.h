@@ -23,6 +23,7 @@ uint32_t getIMUZ(void);   // IMU z-axis
 uint32_t getJoystickX(void);  // Joystick x-direction
 uint32_t getJoystickY(void);  // Joystick y-direction
 uint32_t getBoatSelectVal(void);  // Boat select potentiometer
+uint8_t ADC10ToByte(uint32_t adcVal); // Convert 10-bit ADC value to 8-bit byte
 
 #endif /* ServAD_H */
 
