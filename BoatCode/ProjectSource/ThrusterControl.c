@@ -2,13 +2,12 @@
 
 #define THRUSTER_TIMER_PERIOD_TICKS     24999
 
-#define THRUSTER_REVERSE_TICKS          625
-#define THRUSTER_NEUTRAL_TICKS          1250
-#define THRUSTER_FORWARD_TICKS          1875
+#define THRUSTER_REVERSE_TICKS          1250
+#define THRUSTER_NEUTRAL_TICKS          1875
+#define THRUSTER_FORWARD_TICKS          2500
 
-#define THRUSTER_MAX_OFFSET_TICKS       625
-
-
+#define THRUSTER_FULL_OFFSET_TICKS      (THRUSTER_FORWARD_TICKS - THRUSTER_NEUTRAL_TICKS)
+#define THRUSTER_MAX_CMD                127
 
 static uint16_t CommandToTicks(int16_t cmd);
 
@@ -23,12 +22,10 @@ void ThrusterControl_Init(void)
     TMR3 = 0;
 
     // OC2 -> RB8
-//    ANSELBbits.ANSB8 = 0; no ansel functionality for these pins
     TRISBbits.TRISB8 = 0;
     RPB8Rbits.RPB8R = 0b0101;
 
     // OC3 -> RB9
-//    ANSELBbits.ANSB9 = 0;
     TRISBbits.TRISB9 = 0;
     RPB9Rbits.RPB9R = 0b0101;
 
@@ -73,16 +70,16 @@ void ThrusterControl_SetThrust(uint8_t xJoyStick, uint8_t yJoyStick)
 // cmd range is roughly -127 to +127
 void ThrusterControl_SetRaw(int16_t leftCmd, int16_t rightCmd)
 {
-    if (leftCmd > THRUSTER_CONTROL_MAX_CMD) {
-        leftCmd = THRUSTER_CONTROL_MAX_CMD;
-    } else if (leftCmd < -THRUSTER_CONTROL_MAX_CMD) {
-        leftCmd = -THRUSTER_CONTROL_MAX_CMD;
+    if (leftCmd > THRUSTER_MAX_CMD) {
+        leftCmd = THRUSTER_MAX_CMD;
+    } else if (leftCmd < -THRUSTER_MAX_CMD) {
+        leftCmd = -THRUSTER_MAX_CMD;
     }
 
-    if (rightCmd > THRUSTER_CONTROL_MAX_CMD) {
-        rightCmd = THRUSTER_CONTROL_MAX_CMD;
-    } else if (rightCmd < -THRUSTER_CONTROL_MAX_CMD) {
-        rightCmd = -THRUSTER_CONTROL_MAX_CMD;
+    if (rightCmd > THRUSTER_MAX_CMD) {
+        rightCmd = THRUSTER_MAX_CMD;
+    } else if (rightCmd < -THRUSTER_MAX_CMD) {
+        rightCmd = -THRUSTER_MAX_CMD;
     }
 
     OC2RS = CommandToTicks(leftCmd);
@@ -93,9 +90,13 @@ void ThrusterControl_SetRaw(int16_t leftCmd, int16_t rightCmd)
 static uint16_t CommandToTicks(int16_t cmd)
 {
     int32_t ticks;
+    int32_t maxOffsetTicks;
+
+    maxOffsetTicks = (int32_t)(THRUSTER_FULL_OFFSET_TICKS *
+                              THRUSTER_CONTROL_MAX_THRUST);
 
     ticks = THRUSTER_NEUTRAL_TICKS;
-    ticks += ((int32_t)cmd * THRUSTER_MAX_OFFSET_TICKS) / THRUSTER_CONTROL_MAX_CMD;
+    ticks += ((int32_t)cmd * maxOffsetTicks) / THRUSTER_MAX_CMD;
 
     if (ticks > THRUSTER_FORWARD_TICKS) {
         ticks = THRUSTER_FORWARD_TICKS;
