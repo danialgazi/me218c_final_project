@@ -33,7 +33,7 @@
 /****************************************************************************/
 // This macro determines that nuber of services that are *actually* used in
 // a particular application. It will vary in value from 1 to MAX_NUM_SERVICES
-#define NUM_SERVICES 3
+#define NUM_SERVICES 2
 
 /****************************************************************************/
 // These are the definitions for Service 0, the lowest priority service.
@@ -57,11 +57,11 @@
 // These are the definitions for Service 1
 #if NUM_SERVICES > 1
 // the header file with the public function prototypes
-#define SERV_1_HEADER "TestAnalogInputsService.h"
+#define SERV_1_HEADER "CommsService.h"
 // the name of the Init function
-#define SERV_1_INIT InitTestAnalogInputsService
+#define SERV_1_INIT InitCommsService
 // the name of the run function
-#define SERV_1_RUN RunTestAnalogInputsService
+#define SERV_1_RUN RunCommsService
 // How big should this services Queue be?
 #define SERV_1_QUEUE_SIZE 3
 #endif
@@ -263,6 +263,7 @@ typedef enum
   ES_NEW_KEY,               /* signals a new key received from terminal */
   ES_LOCK,
   ES_UNLOCK,
+  ES_BOAT_ACK,
   // HSM TEMPLATE
   ES_ENTRY,
   ES_ENTRY_HISTORY,
@@ -271,6 +272,7 @@ typedef enum
   // ANALOG INPUTS
   ES_IMU_SHAKE_DETECTED     /* signals that IMU has been shaken above threshold */
           
+  ES_BOAT_ACK
 }ES_EventType_t;
 
 /****************************************************************************/
