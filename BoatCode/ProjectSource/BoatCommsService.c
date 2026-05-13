@@ -11,8 +11,8 @@
 
 /*----------------------------- Module Defines ----------------------------*/
 
-#define TEST_QUACKRAFT_ADDRESS     0x2083
-#define TEST_MALLARD_ADDRESS       0x2183
+#define TEST_QUACKRAFT_ADDRESS     0x2084
+#define TEST_MALLARD_ADDRESS       0x2184
 #define TEST_CHARGE_BYTE           0x55
 
 /*---------------------------- Module Variables ---------------------------*/

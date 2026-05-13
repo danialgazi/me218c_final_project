@@ -10,8 +10,8 @@
 
 /*----------------------------- Module Defines ----------------------------*/
 
-#define TEST_QUACKRAFT_ADDRESS     0x2083
-#define TEST_MALLARD_ADDRESS       0x2183
+#define TEST_QUACKRAFT_ADDRESS     0x2084
+#define TEST_MALLARD_ADDRESS       0x2184
 
 /*---------------------------- Module Variables ---------------------------*/
 
