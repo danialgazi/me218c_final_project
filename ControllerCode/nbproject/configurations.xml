@@ -46,6 +46,10 @@
       <itemPath>ProjectHeaders/TestHarnessService0.h</itemPath>
       <itemPath>ProjectHeaders/CommsService.h</itemPath>
       <itemPath>ProjectHeaders/ControllerCom.h</itemPath>
+      <itemPath>ProjectHeaders/ADService.h</itemPath>
+      <itemPath>ProjectHeaders/IMUModule.h</itemPath>
+      <itemPath>ProjectHeaders/PIC32_AD_Lib.h</itemPath>
+      <itemPath>ProjectHeaders/TestAnalogInputsService.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -64,6 +68,10 @@
       <itemPath>ProjectSource/main.c</itemPath>
       <itemPath>ProjectSource/CommsService.c</itemPath>
       <itemPath>ProjectSource/ControllerCom.c</itemPath>
+      <itemPath>ProjectSource/ADService.c</itemPath>
+      <itemPath>ProjectSource/IMUModule.c</itemPath>
+      <itemPath>ProjectSource/PIC32_AD_Lib.c</itemPath>
+      <itemPath>ProjectSource/TestAnalogInputsService.c</itemPath>
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>

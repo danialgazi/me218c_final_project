@@ -7,15 +7,19 @@
 #include "ES_Framework.h"
 #include "CommsService.h"
 #include "ControllerCom.h"
+#include "ADService.h"
+#include "dbprintf.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 
 #define TEST_QUACKRAFT_ADDRESS     0x2084
 #define TEST_MALLARD_ADDRESS       0x2184
+#define ALERT_PERIOD  200 // 200 ms between alerts to the boat (5hz)
 
 /*---------------------------- Module Variables ---------------------------*/
 
 static uint8_t MyPriority;
+static bool joystickDrive = false;
 
 /*------------------------------ Module Code ------------------------------*/
 
@@ -62,7 +66,9 @@ ES_Event_t RunCommsService(ES_Event_t ThisEvent)
             DB_printf("  d = turn right\r\n");
             DB_printf("  x = idle / stop\r\n");
             DB_printf("  c = send charging packet\r\n");
+            DB_printf("  j = drive with joystick\r\n");
             DB_printf("--------------------------------\r\n");
+            ES_Timer_InitTimer(COMMS_TIMER, ALERT_PERIOD);
             break;
 
         case ES_NEW_KEY:
@@ -122,6 +128,14 @@ ES_Event_t RunCommsService(ES_Event_t ThisEvent)
                     DB_printf("Sending CHARGING packet\r\n");
                     ControllerCom_SendCharging(TEST_QUACKRAFT_ADDRESS);
                     break;
+                  case 'j':
+                    joystickDrive = !joystickDrive;
+                    if (joystickDrive) {
+                        DB_printf("Joystick drive ENABLED\r\n");
+                    } else {
+                        DB_printf("Joystick drive DISABLED\r\n");
+                    }
+                    break;
 
                 default:
                     DB_printf("Unknown key. Use p, w, s, a, d, x, c\r\n");
@@ -141,7 +155,18 @@ ES_Event_t RunCommsService(ES_Event_t ThisEvent)
                 DB_printf("  Pairing success byte received\r\n");
             }
             break;
-
+          case ES_TIMEOUT:
+            if (ThisEvent.EventParam == COMMS_TIMER) {
+              if (joystickDrive) {
+                ControllerCom_SendDriving(TEST_QUACKRAFT_ADDRESS,
+                                          ADC10ToByte(getJoystickY()),
+                                          ADC10ToByte(getJoystickX()),
+                                          0x00);
+                DB_printf("Joystick drive packet sent, values: %u, %u\r\n", ADC10ToByte(getJoystickY()), ADC10ToByte(getJoystickX()));
+              }
+              ES_Timer_InitTimer(COMMS_TIMER, ALERT_PERIOD);
+            }
+            break;
         default:
             break;
     }

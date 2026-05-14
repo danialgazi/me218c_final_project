@@ -199,11 +199,11 @@ static void BoatCom_ProcessControllerPacket(void)
                 break;
 
             default:
-//                DB_printf("bad status %d\r\n", latestCommand.statusByte);
+                DB_printf("bad status %d\r\n", latestCommand.statusByte);
                 break;
         }
     } else {
-//        DB_printf("PROC bad\r\n");
+        DB_printf("PROC bad\r\n");
     }
 }
 
@@ -256,14 +256,15 @@ void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
 //            DB_printf("b %d\r\n", byte);
 //            DB_printf("i %d\r\n", rxIndex);
 
-            if (byte == BOAT_COM_START_DELIMITER) {
-//                DB_printf("start\r\n");
-                rxIndex = 0;
-            }
+            // Only accept 0x7E as a start delimiter when we are
+            // currently waiting for the start of a new packet.
+            if (rxIndex == 0) {
+                if (byte != BOAT_COM_START_DELIMITER) {
+//                    DB_printf("skip\r\n");
+                    continue;
+                }
 
-            if (rxIndex == 0 && byte != BOAT_COM_START_DELIMITER) {
-//                DB_printf("skip\r\n");
-                continue;
+//                DB_printf("start\r\n");
             }
 
             rxPacket[rxIndex] = byte;
