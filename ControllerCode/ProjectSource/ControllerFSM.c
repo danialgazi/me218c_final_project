@@ -6,16 +6,8 @@
    Flat FSM for controller boat selection, pairing, driving, and refueling.
 
  Notes
-   This file intentionally only builds the FSM logic. ES_Configure timer
-   routing and user events still need to be added when this service is wired in:
-     ES_PAIR_BUTTON_PRESSED, ES_PAIR_BUTTON_RELEASED,
-     ES_SHOOT_BUTTON_PRESSED, ES_SHOOT_BUTTON_RELEASED,
-     ES_REFUEL_SW_ON, ES_REFUEL_SW_OFF
-
-   Timers below also need ES_Configure symbolic names and response functions
-   routed to PostControllerFSM:
-     CONTROLLER_PACKET_TIMER, CONTROLLER_PAIR_TIMER,
-     CONTROLLER_ACK_TIMER, CONTROLLER_REFUEL_TIMER
+   Controller packet, pairing, ack timeout, and refuel timers are routed to
+   PostControllerFSM in ES_Configure.
 ****************************************************************************/
 
 /*----------------------------- Include Files -----------------------------*/
@@ -25,9 +17,8 @@
 #include "ControllerCom.h"
 #include "ADService.h"
 #include "IMUModule.h"
-
-// Replace with actual digital input header here when it is added to the project.
-// #include "DigitalInput.h"
+#include "NeopixelModule.h"
+#include "DigitalInputService.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 // Timing and other constants for controller behavior
@@ -38,26 +29,11 @@
 #define CONTROLLER_REFUEL_DURATION_MS    5000u 
 
 // Team and boat selection constants
-#define CONTROLLER_COM_NUM_TEAMS         5u     // 5 teams in ME218C
 #define BOAT_SELECT_ADC_MAX              1023u
 #define FUEL_FULL_PERCENT                100u
 
 // Digital input bit masks for drive packet
 #define SHOOT_DIGI_MASK                  CONTROLLER_COM_BUTTON_SMACK
-
-// Replace these with timer names from ES_Configure when this FSM is registered.
-#ifndef CONTROLLER_PACKET_TIMER
-#define CONTROLLER_PACKET_TIMER          1
-#endif
-#ifndef CONTROLLER_PAIR_TIMER
-#define CONTROLLER_PAIR_TIMER            2
-#endif
-#ifndef CONTROLLER_ACK_TIMER
-#define CONTROLLER_ACK_TIMER             3
-#endif
-#ifndef CONTROLLER_REFUEL_TIMER
-#define CONTROLLER_REFUEL_TIMER          4
-#endif
 
 /*---------------------------- Module Functions ---------------------------*/
 static void ResetControllerData(void);
@@ -79,6 +55,10 @@ static void StartContinuousShake(void);
 static void StopContinuousShake(void);
 static void UpdateLinearRefuel(void);
 static void SampleForContinuousShake(void);
+static void EnterBoatSelect(void);
+static void EnterPairing(void);
+static void EnterDriving(void);
+static void EnterRefuel(void);
 
 /*---------------------------- Module Variables ---------------------------*/
 static ControllerState_t CurrentState;
@@ -108,6 +88,7 @@ bool InitControllerFSM(uint8_t Priority)
 
   MyPriority = Priority;
   CurrentState = ControllerInitPState;
+  NeopixelModule_Init();
 
   ThisEvent.EventType = ES_INIT;
   return ES_PostToService(MyPriority, ThisEvent);
@@ -131,7 +112,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
       {
         // Perform any initialization needed for this state machine
         ResetControllerData();
-        CurrentState = BoatSelect;
+        EnterBoatSelect();
       }
     }
     break;
@@ -151,7 +132,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
           SendPairingRequest();
           RestartPairingTimer();
           RestartAckTimer();
-          CurrentState = Pairing;
+          EnterPairing();
         }
         break;
 
@@ -178,8 +159,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
           {
             // Stop pairing timers and start driving timers
             StopPairingTimer();
-            StartDrivingTimers();
-            CurrentState = Driving;
+            EnterDriving();
           }
         }
         break;
@@ -203,7 +183,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
             // Assume pairing failed or connection lost. bascially reset
             StopPairingTimer();
             ES_Timer_StopTimer(CONTROLLER_ACK_TIMER);
-            CurrentState = BoatSelect;
+            EnterBoatSelect();
           }
         }
         break;
@@ -249,8 +229,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
           RefuelSwitchOn = true;
           // Reset timers
           StopDrivingTimers();
-          StartRefuelTimers();
-          CurrentState = Refuel;
+          EnterRefuel();
         }
         break;
 
@@ -275,7 +254,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
             // Assume connection lost. basically reset to boat select
             IsPaired = false;
             StopDrivingTimers();
-            CurrentState = BoatSelect;
+            EnterBoatSelect();
           }
         }
         break;
@@ -296,8 +275,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
           // Transition back to driving state on refuel switch deactivation
           RefuelSwitchOn = false;
           StopRefuelTimers();
-          StartDrivingTimers();
-          CurrentState = Driving;
+          EnterDriving();
         }
         break;
 
@@ -335,7 +313,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
             IsPaired = false;
             RefuelSwitchOn = false;
             StopRefuelTimers();
-            CurrentState = BoatSelect;
+            EnterBoatSelect();
           }
         }
         break;
@@ -595,4 +573,31 @@ static void SampleForContinuousShake(void)
   SawShakeThisSample = false;
 
   IMUModule_Check4Shake();
+}
+
+// Helpers for transitioning between states, also sets neopixel pattern for each state
+static void EnterBoatSelect(void)
+{
+  CurrentState = BoatSelect;
+  LEDS_Unpaired();
+}
+
+static void EnterPairing(void)
+{
+  CurrentState = Pairing;
+  LEDS_Pairing();
+}
+
+static void EnterDriving(void)
+{
+  StartDrivingTimers();
+  CurrentState = Driving;
+  LEDS_Driving();
+}
+
+static void EnterRefuel(void)
+{
+  StartRefuelTimers();
+  CurrentState = Refuel;
+  LEDS_Refueling();
 }

@@ -42,6 +42,8 @@
 #include "ES_Port.h"
 #include "terminal.h"
 #include "dbprintf.h"
+#include "ControllerFSM.h"
+#include "ControllerCom.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 // these times assume a 10.000mS/tick timing
@@ -69,6 +71,8 @@ static void BlinkLED(void);
 static void InitTMR2(void);
 static void StartTMR2(void);
 #endif
+static void PostControllerTestEvent(ES_EventType_t EventType, uint16_t EventParam);
+static void PrintControllerFSMTestKeys(void);
 /*---------------------------- Module Variables ---------------------------*/
 // with the introduction of Gen2, we need a module level Priority variable
 static uint8_t MyPriority;
@@ -111,6 +115,7 @@ bool InitTestHarnessService0(uint8_t Priority)
   DB_printf( "Press 'd' to test event deferral \n\r");
   DB_printf( "Press 'r' to test event recall \n\r");
   DB_printf( "Press 'p' to test posting from an interrupt \n\r");
+  PrintControllerFSMTestKeys();
 
   /********************************************
    in here you write your initialization code
@@ -192,20 +197,20 @@ ES_Event_t RunTestHarnessService0(ES_Event_t ThisEvent)
     case ES_INIT:
     {
       ES_Timer_InitTimer(SERVICE0_TIMER, HALF_SEC);
-      puts("Service 00:");
-      DB_printf("\rES_INIT received in Service %d\r\n", MyPriority);
+      //puts("Service 00:");
+      //DB_printf("\rES_INIT received in Service %d\r\n", MyPriority);
     }
     break;
     case ES_TIMEOUT:   // re-start timer & announce
     {
       ES_Timer_InitTimer(SERVICE0_TIMER, FIVE_SEC);
-      DB_printf("ES_TIMEOUT received from Timer %d in Service %d\r\n",
-          ThisEvent.EventParam, MyPriority);
+      //DB_printf("ES_TIMEOUT received from Timer %d in Service %d\r\n",
+          //ThisEvent.EventParam, MyPriority);
     }
     break;
     case ES_SHORT_TIMEOUT:   // lower the line & announce
     {
-      puts("\rES_SHORT_TIMEOUT received\r\n");
+      //puts("\rES_SHORT_TIMEOUT received\r\n");
     }
     break;
     case ES_NEW_KEY:   // announce
@@ -231,6 +236,71 @@ ES_Event_t RunTestHarnessService0(ES_Event_t ThisEvent)
           DeferredChar = '1';
         }
       }
+      switch ((char)ThisEvent.EventParam)
+      {
+        case '1':
+          PostControllerTestEvent(ES_PAIR_BUTTON_PRESSED, 0);
+          DB_printf("FSM test: ES_PAIR_BUTTON_PRESSED\r\n");
+          break;
+
+        case '2':
+          PostControllerTestEvent(ES_PAIR_BUTTON_RELEASED, 0);
+          DB_printf("FSM test: ES_PAIR_BUTTON_RELEASED\r\n");
+          break;
+
+        case '3':
+          PostControllerTestEvent(ES_BOAT_ACK, CONTROLLER_COM_PAIRING_SUCCESS);
+          DB_printf("FSM test: ES_BOAT_ACK pairing success\r\n");
+          break;
+
+        case '4':
+          PostControllerTestEvent(ES_BOAT_ACK, 50);
+          DB_printf("FSM test: ES_BOAT_ACK fuel 50\r\n");
+          break;
+
+        case '5':
+          PostControllerTestEvent(ES_REFUEL_SW_ON, 0);
+          DB_printf("FSM test: ES_REFUEL_SW_ON\r\n");
+          break;
+
+        case '6':
+          PostControllerTestEvent(ES_REFUEL_SW_OFF, 0);
+          DB_printf("FSM test: ES_REFUEL_SW_OFF\r\n");
+          break;
+
+        case '7':
+          PostControllerTestEvent(ES_SHOOT_BUTTON_PRESSED, 0);
+          DB_printf("FSM test: ES_SHOOT_BUTTON_PRESSED\r\n");
+          break;
+
+        case '8':
+          PostControllerTestEvent(ES_SHOOT_BUTTON_RELEASED, 0);
+          DB_printf("FSM test: ES_SHOOT_BUTTON_RELEASED\r\n");
+          break;
+
+        case '9':
+          PostControllerTestEvent(ES_IMU_SHAKE_DETECTED, 0);
+          DB_printf("FSM test: ES_IMU_SHAKE_DETECTED\r\n");
+          break;
+
+        case '0':
+          PostControllerTestEvent(ES_TIMEOUT, CONTROLLER_ACK_TIMER);
+          DB_printf("FSM test: forced CONTROLLER_ACK_TIMER timeout\r\n");
+          break;
+
+        case '-':
+          PostControllerTestEvent(ES_TIMEOUT, CONTROLLER_PACKET_TIMER);
+          DB_printf("FSM test: forced CONTROLLER_PACKET_TIMER timeout\r\n");
+          break;
+
+        case '=':
+          PostControllerTestEvent(ES_TIMEOUT, CONTROLLER_REFUEL_TIMER);
+          DB_printf("FSM test: forced CONTROLLER_REFUEL_TIMER timeout\r\n");
+          break;
+
+        default:
+          break;
+      }
 #ifdef TEST_INT_POST
       if ('p' == ThisEvent.EventParam)
       {
@@ -250,6 +320,24 @@ ES_Event_t RunTestHarnessService0(ES_Event_t ThisEvent)
 /***************************************************************************
  private functions
  ***************************************************************************/
+static void PostControllerTestEvent(ES_EventType_t EventType, uint16_t EventParam)
+{
+  ES_Event_t NewEvent;
+
+  NewEvent.EventType = EventType;
+  NewEvent.EventParam = EventParam;
+  PostControllerFSM(NewEvent);
+}
+
+static void PrintControllerFSMTestKeys(void)
+{
+  DB_printf("\rController FSM test keys:\r\n");
+  DB_printf("  1 pair press, 2 pair release, 3 pairing ack\r\n");
+  DB_printf("  4 fuel ack 50, 5 refuel on, 6 refuel off\r\n");
+  DB_printf("  7 shoot press, 8 shoot release, 9 IMU shake\r\n");
+  DB_printf("  0 ack timeout, - packet tick, = refuel tick\r\n");
+}
+
 #ifdef BLINK_LED
 #define LED LATBbits.LATB6
 static void InitLED(void)
