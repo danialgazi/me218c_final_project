@@ -49,7 +49,10 @@
 
 static bool isThrottleApplied(uint8_t joy1, uint8_t joy2);
 static void resetChargeAccounting(void);
-static uint8_t decreaseChargeStatus(uint8_t currentCharge, uint8_t joy1, uint8_t joy2);
+static uint8_t decreaseChargeStatus(uint8_t currentCharge,
+                                    uint8_t joy1,
+                                    uint8_t joy2,
+                                    uint8_t digiByte);
 static uint8_t increaseChargeStatus(uint8_t currentCharge);
 
 /*---------------------------- Module Variables ---------------------------*/
@@ -224,8 +227,9 @@ ES_Event_t RunBoatFSM(ES_Event_t ThisEvent)
             }
 
             chargeStatus = decreaseChargeStatus(chargeStatus,
-                                                latestCommand.joy1Byte,
-                                                latestCommand.joy2Byte);
+                                    latestCommand.joy1Byte,
+                                    latestCommand.joy2Byte,
+                                    latestCommand.digiByte);
 
             BoatCom_SendAck(pairedControllerAddress, chargeStatus);
           }
@@ -346,28 +350,58 @@ BoatState_t QueryBoatFSM(void)
   }
 }
 
-static uint8_t decreaseChargeStatus(uint8_t currentCharge, uint8_t joy1, uint8_t joy2)
+static uint8_t decreaseChargeStatus(uint8_t currentCharge,
+                                    uint8_t joy1,
+                                    uint8_t joy2,
+                                    uint8_t digiByte)
 {
+  static uint16_t lastDriveTime = 0;
+  static uint16_t leftoverMs = 0;
+  static bool firstCall = true;
+
   uint16_t currentTime = ES_Timer_GetTime();
 
-  if (firstChargeCall)
+  if (firstCall)
   {
     lastDriveTime = currentTime;
-    firstChargeCall = false;
+    firstCall = false;
     return currentCharge;
   }
 
   uint16_t elapsedMs = currentTime - lastDriveTime;
   lastDriveTime = currentTime;
 
-  if (!isThrottleApplied(joy1, joy2))
+  bool thrustersActive = isThrottleApplied(joy1, joy2);
+  bool duckShooterActive = ((digiByte & 1) == 1);
+
+  uint8_t drainMultiplier = 0;
+
+  if (thrustersActive)
+  {
+    drainMultiplier++;
+  }
+
+  if (duckShooterActive)
+  {
+    drainMultiplier++;
+  }
+
+  // If neither thrusters nor duck shooter are active, do not lose charge.
+  if (drainMultiplier == 0)
   {
     return currentCharge;
   }
 
+  // FULL_CHARGE = 100 over MAX_CHARGE_TIME = 40000 ms
+  // so 1 charge point = 400 ms at 1x drain.
   uint16_t msPerChargePoint = MAX_CHARGE_TIME / FULL_CHARGE;
 
-  uint16_t activeMs = leftoverMs + elapsedMs;
+  // Multiply elapsed time by active loads:
+  // thrusters only = 1x
+  // shooter only = 1x
+  // thrusters + shooter = 2x
+  uint16_t activeMs = leftoverMs + (elapsedMs * drainMultiplier);
+
   uint8_t chargeDecrease = activeMs / msPerChargePoint;
 
   leftoverMs = activeMs % msPerChargePoint;
