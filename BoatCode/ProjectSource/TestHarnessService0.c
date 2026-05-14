@@ -99,7 +99,10 @@ bool InitTestHarnessService0(uint8_t Priority)
   ES_Event_t ThisEvent;
 
   MyPriority = Priority;
-
+  
+  // Initalize Pump
+  Pump_Init();
+  
   // When doing testing, it is useful to announce just which program
   // is running.
   clrScrn();
@@ -111,6 +114,8 @@ bool InitTestHarnessService0(uint8_t Priority)
   DB_printf( "Press 'd' to test event deferral \n\r");
   DB_printf( "Press 'r' to test event recall \n\r");
   DB_printf( "Press 'p' to test posting from an interrupt \n\r");
+  DB_printf( "Press '1' to test pump turning on \n\r");
+  DB_printf( "Press '2' to test pump turning off \n\r");
 
   /********************************************
    in here you write your initialization code
@@ -192,20 +197,20 @@ ES_Event_t RunTestHarnessService0(ES_Event_t ThisEvent)
     case ES_INIT:
     {
       ES_Timer_InitTimer(SERVICE0_TIMER, HALF_SEC);
-      puts("Service 00:");
+      //puts("Service 00:");
       DB_printf("\rES_INIT received in Service %d\r\n", MyPriority);
     }
     break;
     case ES_TIMEOUT:   // re-start timer & announce
     {
       ES_Timer_InitTimer(SERVICE0_TIMER, FIVE_SEC);
-      DB_printf("ES_TIMEOUT received from Timer %d in Service %d\r\n",
-          ThisEvent.EventParam, MyPriority);
+      //DB_printf("ES_TIMEOUT received from Timer %d in Service %d\r\n",
+          //ThisEvent.EventParam, MyPriority);
     }
     break;
     case ES_SHORT_TIMEOUT:   // lower the line & announce
     {
-      puts("\rES_SHORT_TIMEOUT received\r\n");
+      //puts("\rES_SHORT_TIMEOUT received\r\n");
     }
     break;
     case ES_NEW_KEY:   // announce
@@ -231,6 +236,18 @@ ES_Event_t RunTestHarnessService0(ES_Event_t ThisEvent)
           DeferredChar = '1';
         }
       }
+      
+      if ('1' == ThisEvent.EventParam)
+      {
+        DB_printf("Turning on Pump");
+        Pump_On();
+      }
+      
+      if ('2' == ThisEvent.EventParam) {
+        DB_printf("Turning off Pump");
+        Pump_Off();
+      }
+      
 #ifdef TEST_INT_POST
       if ('p' == ThisEvent.EventParam)
       {
