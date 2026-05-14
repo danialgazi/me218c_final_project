@@ -297,6 +297,11 @@ ES_Event_t RunTestHarnessService0(ES_Event_t ThisEvent)
           PostControllerTestEvent(ES_TIMEOUT, CONTROLLER_REFUEL_TIMER);
           DB_printf("FSM test: forced CONTROLLER_REFUEL_TIMER timeout\r\n");
           break;
+          
+        case 'z':
+          LEDS_Unpaired();
+          DB_printf("Testing Red LEDs\r\n");
+          break;
 
         default:
           break;

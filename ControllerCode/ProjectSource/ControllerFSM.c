@@ -19,6 +19,7 @@
 #include "IMUModule.h"
 #include "NeopixelModule.h"
 #include "DigitalInputService.h"
+#include "dbprintf.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 // Timing and other constants for controller behavior
@@ -53,7 +54,6 @@ static void StopPairingTimer(void);
 static void HandleBoatAck(ES_Event_t ThisEvent);
 static void StartContinuousShake(void);
 static void StopContinuousShake(void);
-static void UpdateLinearRefuel(void);
 static void SampleForContinuousShake(void);
 static void EnterBoatSelect(void);
 static void EnterPairing(void);
@@ -78,14 +78,14 @@ static bool SawShakeThisSample;
 
 // State variables for refueling logic
 static uint8_t FuelPercent;
-static uint16_t ContinuousShakeMs;
 
 /*------------------------------ Module Code ------------------------------*/
 
 bool InitControllerFSM(uint8_t Priority)
 {
   ES_Event_t ThisEvent;
-
+  
+  DB_printf("Starting State Machine, in INIT\r\n");
   MyPriority = Priority;
   CurrentState = ControllerInitPState;
   NeopixelModule_Init();
@@ -110,6 +110,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
     {
       if (ThisEvent.EventType == ES_INIT)
       {
+        DB_printf("In ControllerInit -> ES_INIT\r\n");
         // Perform any initialization needed for this state machine
         ResetControllerData();
         EnterBoatSelect();
@@ -123,6 +124,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
       {
         case ES_PAIR_BUTTON_PRESSED:
         {
+          DB_printf("In BoatSelect -> ES_PAIR_BUTTON_PRESSED\r\n");
           // Start pairing process
           PairButtonPressed = true;
           // Read boat selection and addresses, send initial pairing request, and start timers
@@ -137,6 +139,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
         break;
 
         case ES_PAIR_BUTTON_RELEASED:
+          DB_printf("In BoatSelect -> ES_PAIR_BUTTON_RELEASED\r\n");
           // Reset pairing state variable
           PairButtonPressed = false;
           break;
@@ -153,6 +156,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
       {
         case ES_BOAT_ACK:
         {
+          DB_printf("In Pairing -> ES_BOAT_ACK\r\n");
           // Handle ack to check for pairing success and transition to driving if successful
           HandleBoatAck(ThisEvent);
           if (IsPaired)   // Succesful            
@@ -165,6 +169,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
         break;
 
         case ES_PAIR_BUTTON_RELEASED:
+          DB_printf("In Pairing -> ES_PAIR_BUTTON_RELEASED\r\n");
           // Reset pairing state variable
           PairButtonPressed = false;
           break;
@@ -174,12 +179,14 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
           // Check resending pairing request on pairing timer timeout
           if (ThisEvent.EventParam == CONTROLLER_PAIR_TIMER)
           {
+            DB_printf("In Pairing -> ES_TIMEOUT -> CONTROLLER_PAIR_TIMER\r\n");
             SendPairingRequest();
             RestartPairingTimer();
           }
           // Return to boat select on ack timer timeout
           else if (ThisEvent.EventParam == CONTROLLER_ACK_TIMER)
           {
+            DB_printf("In Pairing -> ES_TIMEOUT -> CONTROLLER_ACK_TIMER\r\n");
             // Assume pairing failed or connection lost. bascially reset
             StopPairingTimer();
             ES_Timer_StopTimer(CONTROLLER_ACK_TIMER);
@@ -210,21 +217,25 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
         // break;
 
         case ES_PAIR_BUTTON_RELEASED:
+          DB_printf("In Driving -> ES_PAIR_BUTTON_RELEASED\r\n");
           PairButtonPressed = false;
           break;
 
         case ES_SHOOT_BUTTON_PRESSED:
-        // Set shoot button state variable to be included in drive packets
+          DB_printf("In Driving -> ES_SHOOT_BUTTON_PRESSED\r\n");
+          // Set shoot button state variable to be included in drive packets
           ShootButtonPressed = true;
           break;
 
         case ES_SHOOT_BUTTON_RELEASED:
-        // Reset shoot button state variable to be included in drive packets
+          DB_printf("In Driving -> ES_SHOOT_BUTTON_RELEASED\r\n");
+          // Reset shoot button state variable to be included in drive packets
           ShootButtonPressed = false;
           break;
 
         case ES_REFUEL_SW_ON:
         {
+          DB_printf("In Driving -> ES_REFUEL_SW_ON\r\n");
           // Transition to refuel state on refuel switch activation
           RefuelSwitchOn = true;
           // Reset timers
@@ -234,6 +245,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
         break;
 
         case ES_BOAT_ACK:
+          DB_printf("In Driving -> ES_BOAT_ACK\r\n");
           // Handle acks to check for fuel updates and connection status
           HandleBoatAck(ThisEvent);
           break;
@@ -243,6 +255,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
           // Check if packet timer expired to send next drive packet
           if (ThisEvent.EventParam == CONTROLLER_PACKET_TIMER)
           {
+            DB_printf("In Driving -> ES_TIMEOUT -> CONTROLLER_PACKET_TIMER\r\n");
             // Send drive packet and restart timer
             SendDrivePacket();
             ES_Timer_InitTimer(CONTROLLER_PACKET_TIMER,
@@ -251,6 +264,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
           // Check if connection lost due to ack timeout
           else if (ThisEvent.EventParam == CONTROLLER_ACK_TIMER)
           {
+            DB_printf("In Driving -> ES_TIMEOUT -> CONTROLLER_ACK_TIMER\r\n");
             // Assume connection lost. basically reset to boat select
             IsPaired = false;
             StopDrivingTimers();
@@ -272,6 +286,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
         // Refuel switch can be turned off to return to driving state
         case ES_REFUEL_SW_OFF:
         {
+          DB_printf("In Refuel -> ES_REFUEL_SW_OFF\r\n");
           // Transition back to driving state on refuel switch deactivation
           RefuelSwitchOn = false;
           StopRefuelTimers();
@@ -280,13 +295,15 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
         break;
 
         case ES_IMU_SHAKE_DETECTED:
-        // Start or continue continuous shaking to refuel
+          DB_printf("In Refuel -> ES_IMU_SHAKE_DETECTED\r\n");
+          // Start or continue continuous shaking to refuel
           StartContinuousShake();
           SawShakeThisSample = true;
           break;
 
         case ES_BOAT_ACK:
-        // Handle acks to check for fuel updates and connection status
+          DB_printf("In Refuel -> ES_BOAT_ACK\r\n");
+          // Handle acks to check for fuel updates and connection status
           HandleBoatAck(ThisEvent);
           break;
 
@@ -295,6 +312,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
           // Check if packet timer expired to send next refuel packet
           if (ThisEvent.EventParam == CONTROLLER_PACKET_TIMER)
           {
+            DB_printf("In Refuel -> ES_TIMEOUT -> CONTROLLER_PACKET_TIMER\r\n");
             // Send refuel packet and restart timer
             SendRefuelPacket();
             ES_Timer_InitTimer(CONTROLLER_PACKET_TIMER,
@@ -302,6 +320,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
           }
           else if (ThisEvent.EventParam == CONTROLLER_REFUEL_TIMER)
           {
+            DB_printf("In Refuel -> ES_TIMEOUT -> CONTROLLER_REFUEL_TIMER\r\n");
             // Sample for continuous shake to update refuel status and fuel percent
             SampleForContinuousShake();
             ES_Timer_InitTimer(CONTROLLER_REFUEL_TIMER,
@@ -309,6 +328,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
           }
           else if (ThisEvent.EventParam == CONTROLLER_ACK_TIMER)
           {
+            DB_printf("In Refuel -> ES_TIMEOUT -> CONTROLLER_ACK_TIMER\r\n");
             // Assume connection lost. basically reset to boat select
             IsPaired = false;
             RefuelSwitchOn = false;
@@ -356,7 +376,6 @@ static void ResetControllerData(void)
   SawShakeThisSample = false;
   // Start with full fuel on reset
   FuelPercent = FUEL_FULL_PERCENT;
-  ContinuousShakeMs = 0;
 }
 
 /* Read the selected team index from the potentiometer */
@@ -381,7 +400,8 @@ static uint8_t ReadSelectedTeamIndex(void)
   {
     scaledIndex = CONTROLLER_COM_NUM_TEAMS - 1u;
   }
-
+  // Print Selected Team
+  DB_printf("Selected team is: %u\n", scaledIndex);
   return (uint8_t)scaledIndex;
 }
 
@@ -422,10 +442,13 @@ static void SendDrivePacket(void)
                             digiByte);
 }
 
-/* Send a refuel packet to the selected Quackraft */
+/* Send a refuel packet to the selected Quackraft only when shaking */
 static void SendRefuelPacket(void)
 {
-  ControllerCom_SendCharging(QuackraftAddress);
+  if (IsShakingContinuously)
+  {
+    ControllerCom_SendCharging(QuackraftAddress);
+  }
 }
 
 /* Restart the boat acknowledgment timer */
@@ -452,12 +475,11 @@ static void StopDrivingTimers(void)
 /* Start the refuel timers */
 static void StartRefuelTimers(void)
 {
-  ContinuousShakeMs = 0;
   IsShakingContinuously = false;
   // REstart ACk Timer to give ful period in refuel state before assuming connection was lost
   RestartAckTimer();
   ES_Timer_InitTimer(CONTROLLER_PACKET_TIMER, CONTROLLER_PACKET_PERIOD_MS);
-  // Refuel timer is used to sample for continuous shaking and update fuel percent accordingly
+  // Refuel timer is used to sample for continuous shaking
   ES_Timer_InitTimer(CONTROLLER_REFUEL_TIMER, CONTROLLER_REFUEL_SAMPLE_MS);
 }
 
@@ -504,7 +526,7 @@ static void HandleBoatAck(ES_Event_t ThisEvent)
 /* Start continuous shaking */
 static void StartContinuousShake(void)
 {
-  // Variable used to track if controller is being shaken continuously for refueling. Only update fuel percent if shaking continuously, not just a single shake.
+  // Variable used to track if controller is being shaken continuously for refueling.
   IsShakingContinuously = true;
 }
 
@@ -514,56 +536,17 @@ static void StopContinuousShake(void)
   // Reset continuous shake tracking variables
   IsShakingContinuously = false;
   SawShakeThisSample = false;
-  ContinuousShakeMs = 0;
-}
-
-/* Update fuel percentage based on continuous shaking */
-static void UpdateLinearRefuel(void)
-{
-  uint32_t nextFuel;
-
-  // Clip fuel percent if already at or above full
-  if (FuelPercent >= FUEL_FULL_PERCENT)
-  {
-    FuelPercent = FUEL_FULL_PERCENT;
-    return;
-  }
-
-  /* Increase continuous shake time and calculate next fuel percent based on 
-  linear refuel rate. Continuous shake time is tracked in sample intervals 
-  defined by CONTROLLER_REFUEL_SAMPLE_MS.*/
-  ContinuousShakeMs += CONTROLLER_REFUEL_SAMPLE_MS;
-  if (ContinuousShakeMs > CONTROLLER_REFUEL_DURATION_MS)
-  {
-    // Cap continuous shake time at refuel duration to cap fuel percent at 100%
-    ContinuousShakeMs = CONTROLLER_REFUEL_DURATION_MS;
-  }
-
-  // Calculate next fuel percent based on linear refuel rate and cap at 100%
-  nextFuel = ((uint32_t)ContinuousShakeMs * FUEL_FULL_PERCENT) /
-             CONTROLLER_REFUEL_DURATION_MS;
-
-  // Again check if nextFuel is at or above Full, clip at full
-  if (nextFuel > FUEL_FULL_PERCENT)
-  {
-    nextFuel = FUEL_FULL_PERCENT;
-  }
-
-  // Update fuel percent  
-  FuelPercent = (uint8_t)nextFuel;
 }
 
 /* Sample for continuous shake, does this by checking if a shake was detected 
-since the last sample. If shaking continuously, update fuel percent based on 
-linear refuel rate. If not shaking continuously, reset refuel status. 
-This function should be called on a timer in the refuel state at a rate 
-defined by CONTROLLER_REFUEL_SAMPLE_MS. */
+since the last sample. If shaking continuously, keep the shake state active. 
+If not shaking, reset refuel state. This function should be called on a timer 
+in the refuel state at a rate defined by CONTROLLER_REFUEL_SAMPLE_MS. */
 static void SampleForContinuousShake(void)
 {
   if (SawShakeThisSample)
   {
     IsShakingContinuously = true;
-    UpdateLinearRefuel();
   }
   else
   {
@@ -578,18 +561,21 @@ static void SampleForContinuousShake(void)
 // Helpers for transitioning between states, also sets neopixel pattern for each state
 static void EnterBoatSelect(void)
 {
+  DB_printf("Entering Boat Select\n");
   CurrentState = BoatSelect;
   LEDS_Unpaired();
 }
 
 static void EnterPairing(void)
 {
+  DB_printf("Entering Pairing\r\n");
   CurrentState = Pairing;
   LEDS_Pairing();
 }
 
 static void EnterDriving(void)
 {
+  DB_printf("Entering Driving\r\n");
   StartDrivingTimers();
   CurrentState = Driving;
   LEDS_Driving();
@@ -597,6 +583,7 @@ static void EnterDriving(void)
 
 static void EnterRefuel(void)
 {
+  DB_printf("Entering Refuel\r\n");
   StartRefuelTimers();
   CurrentState = Refuel;
   LEDS_Refueling();

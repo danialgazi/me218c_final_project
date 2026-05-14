@@ -26,9 +26,9 @@
 /*----------------------------- Module Defines ----------------------------*/
 
 // Pin assignments
+#define REFUEL_PIN          PORTBbits.RB9
+#define PAIR_PIN            PORTBbits.RB10
 #define SHOOT_PIN           PORTBbits.RB11
-#define REFUEL_PIN          PORTBbits.RB12
-#define PAIR_PIN            PORTBbits.RB13
 
 // Active-high logic
 #define INPUT_ACTIVE        1
@@ -158,20 +158,20 @@ static void DigitalInput_HWInit(void)
     //ANSELBbits.ANSB11 = 0;
     TRISBbits.TRISB11 = 1;
 
-    // Refuel switch: RB12
-    ANSELBbits.ANSB12 = 0;
-    TRISBbits.TRISB12 = 1;
+    // Refuel switch: RB9
+    //ANSELBbits.ANSB9 = 0;
+    TRISBbits.TRISB9 = 1;
 
-    // Pair button: RB13
-    ANSELBbits.ANSB13 = 0;
-    TRISBbits.TRISB13 = 1;
+    // Pair button: RB10
+    //ANSELBbits.ANSB10 = 0;
+    TRISBbits.TRISB10 = 1;
 
     // Set up Interrupt stuff
     CNCONBbits.ON = 1;      // Turn Change Notice Interrupts on
     
-    CNENBbits.CNIEB11 = 1; 
-    CNENBbits.CNIEB12 = 1;
-    CNENBbits.CNIEB13 = 1;
+    CNENBbits.CNIEB9 = 1; 
+    CNENBbits.CNIEB10 = 1;
+    CNENBbits.CNIEB11 = 1;
 
     DigitalInput_ClearCNFlags();
 
