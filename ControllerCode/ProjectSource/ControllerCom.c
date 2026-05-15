@@ -250,14 +250,11 @@ void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
 //            DB_printf("b %d\r\n", byte);
 //            DB_printf("i %d\r\n", rxIndex);
 
-            if (byte == CONTROLLER_COM_START_DELIMITER) {
-//                DB_printf("start\r\n");
-                rxIndex = 0;
-            }
-
-            if (rxIndex == 0 && byte != CONTROLLER_COM_START_DELIMITER) {
-//                DB_printf("skip\r\n");
-                continue;
+            if (rxIndex == 0) {
+                if (byte != CONTROLLER_COM_START_DELIMITER) {
+                    DB_printf("weird packet start %d\r\n", byte);
+                    continue;
+                }
             }
 
             rxPacket[rxIndex] = byte;

@@ -4,6 +4,7 @@
 #include <xc.h>
 #include <sys/attribs.h> // keep these includes in for some reason they are needed for  the isr
 
+
 static volatile uint8_t rxPacket[BOAT_COM_RX_PACKET_SIZE];
 static volatile uint8_t rxIndex = 0;
 
@@ -212,6 +213,10 @@ void BoatCom_SendAck(uint16_t mallardAddress, uint8_t chargeByte)
 {
     if (txBusy) {
         return;
+    }
+    // make sure we don't send the start delimiter on accident
+    if (chargeByte == BOAT_COM_START_DELIMITER) {
+        chargeByte ++;
     }
 
     IEC1bits.U2TXIE = 0;
