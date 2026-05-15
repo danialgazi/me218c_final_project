@@ -33,7 +33,7 @@
 /****************************************************************************/
 // This macro determines that nuber of services that are *actually* used in
 // a particular application. It will vary in value from 1 to MAX_NUM_SERVICES
-#define NUM_SERVICES 3
+#define NUM_SERVICES 5
 
 /****************************************************************************/
 // These are the definitions for Service 0, the lowest priority service.
@@ -83,26 +83,26 @@
 // These are the definitions for Service 3
 #if NUM_SERVICES > 3
 // the header file with the public function prototypes
-#define SERV_3_HEADER "TestHarnessService3.h"
+#define SERV_3_HEADER "ControllerFSM.h"
 // the name of the Init function
-#define SERV_3_INIT InitTestHarnessService3
+#define SERV_3_INIT InitControllerFSM
 // the name of the run function
-#define SERV_3_RUN RunTestHarnessService3
+#define SERV_3_RUN RunControllerFSM
 // How big should this services Queue be?
-#define SERV_3_QUEUE_SIZE 3
+#define SERV_3_QUEUE_SIZE 8
 #endif
 
 /****************************************************************************/
 // These are the definitions for Service 4
 #if NUM_SERVICES > 4
 // the header file with the public function prototypes
-#define SERV_4_HEADER "TestHarnessService4.h"
+#define SERV_4_HEADER "DigitalInputService.h"
 // the name of the Init function
-#define SERV_4_INIT InitTestHarnessService4
+#define SERV_4_INIT InitDigitalInputService
 // the name of the run function
-#define SERV_4_RUN RunTestHarnessService4
+#define SERV_4_RUN RunDigitalInputService
 // How big should this services Queue be?
-#define SERV_4_QUEUE_SIZE 3
+#define SERV_4_QUEUE_SIZE 8
 #endif
 
 /****************************************************************************/
@@ -271,6 +271,14 @@ typedef enum
           
   // ANALOG INPUTS
   ES_IMU_SHAKE_DETECTED,     /* signals that IMU has been shaken above threshold */
+
+  // CONTROLLER DIGITAL INPUTS
+  ES_PAIR_BUTTON_PRESSED,
+  ES_PAIR_BUTTON_RELEASED,
+  ES_SHOOT_BUTTON_PRESSED,
+  ES_SHOOT_BUTTON_RELEASED,
+  ES_REFUEL_SW_ON,
+  ES_REFUEL_SW_OFF,
           
 }ES_EventType_t;
 
@@ -316,11 +324,11 @@ typedef enum
 // priority in servicing them
 #define TIMER_UNUSED ((pPostFunc)0)
 #define TIMER0_RESP_FUNC PostADService
-#define TIMER1_RESP_FUNC TIMER_UNUSED
-#define TIMER2_RESP_FUNC TIMER_UNUSED
-#define TIMER3_RESP_FUNC TIMER_UNUSED
-#define TIMER4_RESP_FUNC TIMER_UNUSED
-#define TIMER5_RESP_FUNC TIMER_UNUSED
+#define TIMER1_RESP_FUNC PostControllerFSM
+#define TIMER2_RESP_FUNC PostControllerFSM
+#define TIMER3_RESP_FUNC PostControllerFSM
+#define TIMER4_RESP_FUNC PostControllerFSM
+#define TIMER5_RESP_FUNC PostDigitalInputService
 #define TIMER6_RESP_FUNC TIMER_UNUSED
 #define TIMER7_RESP_FUNC TIMER_UNUSED
 #define TIMER8_RESP_FUNC TIMER_UNUSED
@@ -341,6 +349,11 @@ typedef enum
 
 #define SERVICE0_TIMER 15
 #define AD_TIMER 0
+#define CONTROLLER_PACKET_TIMER 1
+#define CONTROLLER_PAIR_TIMER 2
+#define CONTROLLER_ACK_TIMER 3
+#define CONTROLLER_REFUEL_TIMER 4
+#define DIGITAL_INPUT_DEBOUNCE_TIMER 5
 #define COMMS_TIMER 14
 
 

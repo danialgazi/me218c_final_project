@@ -109,12 +109,12 @@ ES_Event_t RunADService(ES_Event_t ThisEvent)
     imuY             = ResultsArray[5];   // AN12
 
     // Optional debug print
-    // DB_printf("Joystick X: %u\r\n", joystickX);
-    // DB_printf("Joystick Y: %u\r\n", joystickY);
-    // DB_printf("Boat Select: %u\r\n", boatSelectPotVal);
-    // DB_printf("IMU X: %u\r\n", imuX);
-    // DB_printf("IMU Y: %u\r\n", imuY);
-    // DB_printf("IMU Z: %u\r\n", imuZ);
+//     DB_printf("Joystick X: %u\r\n", joystickX);
+//     DB_printf("Joystick Y: %u\r\n", joystickY);
+//     DB_printf("Boat Select: %u\r\n", boatSelectPotVal);
+//     DB_printf("IMU X: %u\r\n", imuX);
+//     DB_printf("IMU Y: %u\r\n", imuY);
+//     DB_printf("IMU Z: %u\r\n", imuZ);
 
     ES_Timer_InitTimer(AD_TIMER, AD_TIMER_PERIOD);
   }
