@@ -40,7 +40,7 @@
 #define CONTROLLER_COM_RX_LENGTH_LSB        0x06
 
 #define CONTROLLER_COM_PAIRING_SUCCESS      0xFF
-#define MY_TEAM_INDEX              0
+#define MY_TEAM_INDEX              3
 
 /*******************************************************************************
  * Address Arrays

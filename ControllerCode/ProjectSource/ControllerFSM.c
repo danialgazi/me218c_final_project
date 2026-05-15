@@ -408,13 +408,20 @@ static uint8_t ReadSelectedTeamIndex(void)
 /* Get the address of the selected Quackraft */
 static uint16_t GetSelectedQuackraftAddress(void)
 {
+  //return 0x2084;
+  //DB_printf("Selected Quackraft Address is: %u\n", QuackraftAddresses[SelectedTeamIndex]);
   return QuackraftAddresses[SelectedTeamIndex];
 }
 
 /* Get the address of the my Mallard */
 static uint16_t GetMyMallardAddress(void)
 {
-  return MallardAddresses[MY_TEAM_INDEX];
+    // Hard code are address. 
+  //DB_printf("Address: 0x2184");
+  //uint16_t add = QuackraftAddresses[SelectedTeamIndex]
+  //DB_printf("Selected Mallard Address is: %u\n", QuackraftAddresses[SelectedTeamIndex]);
+  return MallardAddresses[SelectedTeamIndex];
+  //return 0x2184;
 }
 
 /* Send a pairing request to the selected Quackraft */
@@ -448,6 +455,10 @@ static void SendRefuelPacket(void)
   if (IsShakingContinuously)
   {
     ControllerCom_SendCharging(QuackraftAddress);
+  }
+  else {
+    // If not shaking then just be chill
+    ControllerCom_SendIdle(QuackraftAddress);
   }
 }
 

@@ -159,7 +159,7 @@ void ControllerCom_SendPairing(uint16_t destinationAddress,
                                uint16_t mallardAddress)
 {
     ControllerCom_Command_t command;
-
+    DB_printf("In Send Pairing");
     command.destinationAddress = destinationAddress;
     command.statusByte = CONTROLLER_COM_STATUS_PAIRING;
     command.joy1Byte = (uint8_t)(mallardAddress >> 8);
@@ -242,7 +242,7 @@ uint8_t ControllerCom_GetLastChargeByte(void)
 void __ISR(_UART2_VECTOR, IPL4SOFT) UART2InterruptHandler(void)
 {
     if (IFS1bits.U2RXIF) {
-//        DB_printf("RX int\r\n");
+        //DB_printf("RX int\r\n");
 
         while (U2STAbits.URXDA) {
             uint8_t byte = U2RXREG;

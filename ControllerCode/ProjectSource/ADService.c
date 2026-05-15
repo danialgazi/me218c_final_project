@@ -111,7 +111,20 @@ ES_Event_t RunADService(ES_Event_t ThisEvent)
     // Optional debug print
 //     DB_printf("Joystick X: %u\r\n", joystickX);
 //     DB_printf("Joystick Y: %u\r\n", joystickY);
-//     DB_printf("Boat Select: %u\r\n", boatSelectPotVal);
+//       DB_printf("Boat Select: %u\r\n", boatSelectPotVal);
+      // Scale potentiometer value to range of team 
+    uint8_t scaledIndex = (boatSelectPotVal * 5) /
+                (1023 + 1u);
+
+  // Clip scaled index to valid range just in case I messed up lol
+  if (scaledIndex >= 5)
+  {
+    scaledIndex = 5 - 1u;
+  }
+
+  DB_printf("Selected team is: %u\n", scaledIndex);
+    
+    
 //     DB_printf("IMU X: %u\r\n", imuX);
 //     DB_printf("IMU Y: %u\r\n", imuY);
 //     DB_printf("IMU Z: %u\r\n", imuZ);
