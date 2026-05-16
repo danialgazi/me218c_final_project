@@ -35,13 +35,15 @@ void IMUModule_Check4Shake(void)
   uint32_t imuZ = getIMUZ();
 
   uint32_t magSq = (imuX * imuX) + (imuY * imuY) + (imuZ * imuZ);
-
+  DB_printf("MagSq = %u\r\n", magSq);
+  
   // Only post if IMU crosses the threshold
   if (magSq > SHAKE_THRESHOLD)
   {
+    DB_printf("Shake Detected/r/n");
     ES_Event_t ShakeEvent;
     ShakeEvent.EventType = ES_IMU_SHAKE_DETECTED; 
-    PostTestAnalogInputsService(ShakeEvent);       // TODO: CHANGE THIS TO REAL SM
+    ES_PostAll(ShakeEvent);       // TODO: CHANGE THIS TO REAL SM
   }
 }
 

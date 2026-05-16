@@ -322,7 +322,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
         case ES_IMU_SHAKE_DETECTED:
           DB_printf("In Refuel -> ES_IMU_SHAKE_DETECTED\r\n");
           // Start or continue continuous shaking to refuel
-          StartContinuousShake();
+          //StartContinuousShake();
           SawShakeThisSample = true;
           break;
 
@@ -488,9 +488,11 @@ static void SendDrivePacket(void)
 /* Send a refuel packet to the selected Quackraft only when shaking */
 static void SendRefuelPacket(void)
 {
-  if (IsShakingContinuously)
+  //if (IsShakingContinuously)
+  if (SawShakeThisSample)
   {
     ControllerCom_SendCharging(QuackraftAddress);
+    SawShakeThisSample = false;
   }
   else {
     // If not shaking then just be chill
@@ -570,7 +572,7 @@ static void HandleBoatAck(ES_Event_t ThisEvent)
   RestartAckTimer();
 }
 
-/* Start continuous shaking */
+/* Start continuous shaking */ 
 static void StartContinuousShake(void)
 {
   // Variable used to track if controller is being shaken continuously for refueling.
@@ -593,14 +595,14 @@ static void SampleForContinuousShake(void)
 {
   if (SawShakeThisSample)
   {
-    IsShakingContinuously = true;
+    //IsShakingContinuously = true;
   }
   else
   {
-    StopContinuousShake();
+    //StopContinuousShake();
   }
 
-  SawShakeThisSample = false;
+  //SawShakeThisSample = false;
 
   IMUModule_Check4Shake();
 }
