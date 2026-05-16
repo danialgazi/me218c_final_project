@@ -39,7 +39,8 @@
 // include our own prototypes to insure consistency between header &
 // actual functionsdefinition
 #include "EventCheckers.h"
-
+// IUnclude our Controller FSM for its function. 
+#include "ControllerFSM.h"
 // This is the event checking function sample. It is not intended to be
 // included in the module. It is only here as a sample to guide you in writing
 // your own event checkers
@@ -119,3 +120,25 @@ bool Check4Keystroke(void)
   return false;
 }
 
+
+bool Check4ChangeAddress(void) 
+{
+    static uint8_t oldaddress = 0;
+    uint8_t newaddress = ReadSelectedTeamIndex();
+    
+    if (oldaddress == 0 || oldaddress != newaddress) {
+        // Update old address
+        oldaddress = newaddress;
+        
+        // State new address
+        DB_printf("Selected team is: %u\n", newaddress);
+        
+        // Post new address event
+        ES_Event_t ThisEvent;
+        ThisEvent.EventType   = ES_NEW_ADDRESS;
+        ThisEvent.EventParam  = 0;
+        ES_PostAll(ThisEvent);
+        return true;
+    }
+    return false;  
+}

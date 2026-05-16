@@ -280,6 +280,9 @@ typedef enum
   ES_REFUEL_SW_ON,
   ES_REFUEL_SW_OFF,
           
+  // Check for New address
+  ES_NEW_ADDRESS
+          
 }ES_EventType_t;
 
 /****************************************************************************/
@@ -314,7 +317,7 @@ typedef enum
 
 /****************************************************************************/
 // This is the list of event checking functions
-#define EVENT_CHECK_LIST Check4Keystroke
+#define EVENT_CHECK_LIST Check4Keystroke, Check4ChangeAddress
 
 /****************************************************************************/
 // These are the definitions for the post functions to be executed when the

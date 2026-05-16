@@ -38,7 +38,7 @@
 
 /*---------------------------- Module Functions ---------------------------*/
 static void ResetControllerData(void);
-static uint8_t ReadSelectedTeamIndex(void);
+uint8_t ReadSelectedTeamIndex(void);
 static uint16_t GetSelectedQuackraftAddress(void);
 static uint16_t GetMyMallardAddress(void);
 static void SendPairingRequest(void);
@@ -139,9 +139,11 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
         break;
 
         case ES_PAIR_BUTTON_RELEASED:
+        {
           DB_printf("In BoatSelect -> ES_PAIR_BUTTON_RELEASED\r\n");
           // Reset pairing state variable
           PairButtonPressed = false;
+        }
           break;
 
         default:
@@ -169,11 +171,24 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
         break;
 
         case ES_PAIR_BUTTON_RELEASED:
+        {
           DB_printf("In Pairing -> ES_PAIR_BUTTON_RELEASED\r\n");
           // Reset pairing state variable
           PairButtonPressed = false;
-          break;
+        }
+        break;
         
+          /* WE choose to not have this behavior. If things mess up look here. 
+         case ES_NEW_ADDRESS:
+        {
+            DB_printf("In Driving -> ES_NEW_ADDRESS\r\n");
+            // Assume we want to connect with new boat 
+            IsPaired = false;
+            StopDrivingTimers();
+            EnterBoatSelect();
+            break;
+        }
+           */
         case ES_TIMEOUT:
         {
           // Check resending pairing request on pairing timer timeout
@@ -243,7 +258,17 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
           EnterRefuel();
         }
         break;
-
+        
+        case ES_NEW_ADDRESS:
+        {
+            DB_printf("In Driving -> ES_NEW_ADDRESS\r\n");
+            // Assume we want to connect with new boat 
+            IsPaired = false;
+            StopDrivingTimers();
+            EnterBoatSelect();
+        }
+        break;
+                
         case ES_BOAT_ACK:
           DB_printf("In Driving -> ES_BOAT_ACK\r\n");
           // Handle acks to check for fuel updates and connection status
@@ -306,7 +331,18 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
           // Handle acks to check for fuel updates and connection status
           HandleBoatAck(ThisEvent);
           break;
-
+          
+        case ES_NEW_ADDRESS:
+        {
+            DB_printf("In Refuel -> ES_NEW_ADDRESS\r\n");
+            // Assume we want to connect with new boat 
+            IsPaired = false;
+            RefuelSwitchOn = false;
+            StopRefuelTimers();
+            EnterBoatSelect();
+            break;
+        }
+        
         case ES_TIMEOUT:
         {
           // Check if packet timer expired to send next refuel packet
@@ -379,7 +415,7 @@ static void ResetControllerData(void)
 }
 
 /* Read the selected team index from the potentiometer */
-static uint8_t ReadSelectedTeamIndex(void)
+uint8_t ReadSelectedTeamIndex(void)
 {
   // Read potentiometer value 
   uint32_t potVal = getBoatSelectVal();
@@ -401,7 +437,7 @@ static uint8_t ReadSelectedTeamIndex(void)
     scaledIndex = CONTROLLER_COM_NUM_TEAMS - 1u;
   }
   // Print Selected Team
-  DB_printf("Selected team is: %u\n", scaledIndex);
+  //DB_printf("Selected team is: %u\n", scaledIndex);
   return (uint8_t)scaledIndex;
 }
 

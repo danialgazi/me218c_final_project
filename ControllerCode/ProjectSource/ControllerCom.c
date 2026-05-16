@@ -159,7 +159,6 @@ void ControllerCom_SendPairing(uint16_t destinationAddress,
                                uint16_t mallardAddress)
 {
     ControllerCom_Command_t command;
-    DB_printf("In Send Pairing");
     command.destinationAddress = destinationAddress;
     command.statusByte = CONTROLLER_COM_STATUS_PAIRING;
     command.joy1Byte = (uint8_t)(mallardAddress >> 8);

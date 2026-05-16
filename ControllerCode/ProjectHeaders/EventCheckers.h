@@ -21,6 +21,7 @@
 
 // prototypes for event checkers
 
-bool Check4Keystroke(void);
+bool Check4Keystroke(void); 
+bool Check4ChangeAddress(void);
 
 #endif /* EventCheckers_H */

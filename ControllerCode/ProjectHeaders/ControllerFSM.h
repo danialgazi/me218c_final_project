@@ -25,4 +25,7 @@ bool PostControllerFSM(ES_Event_t ThisEvent);
 ES_Event_t RunControllerFSM(ES_Event_t ThisEvent);
 ControllerState_t QueryControllerFSM(void);
 
+// Public Functions
+uint8_t ReadSelectedTeamIndex(void);
+
 #endif /* ControllerFSM_H */
