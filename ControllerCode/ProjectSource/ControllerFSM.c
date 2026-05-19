@@ -73,7 +73,6 @@ static bool IsPaired;
 static bool ShootButtonPressed;
 static bool PairButtonPressed;
 static bool RefuelSwitchOn;
-static bool IsShakingContinuously;
 static bool SawShakeThisSample;
 
 // State variables for refueling logic
@@ -409,7 +408,6 @@ static void ResetControllerData(void)
   ShootButtonPressed = false;
   PairButtonPressed = false;
   RefuelSwitchOn = false;
-  IsShakingContinuously = false;
   SawShakeThisSample = false;
   // Start with full fuel on reset
   FuelPercent = FUEL_FULL_PERCENT;
@@ -524,7 +522,6 @@ static void StopDrivingTimers(void)
 /* Start the refuel timers */
 static void StartRefuelTimers(void)
 {
-  IsShakingContinuously = false;
   // REstart ACk Timer to give ful period in refuel state before assuming connection was lost
   RestartAckTimer();
   ES_Timer_InitTimer(CONTROLLER_PACKET_TIMER, CONTROLLER_PACKET_PERIOD_MS);
