@@ -54,6 +54,7 @@
       <itemPath>ProjectHeaders/WS2812.h</itemPath>
       <itemPath>ProjectHeaders/PIC32_AD_Lib.h</itemPath>
       <itemPath>ProjectHeaders/TestAnalogInputsService.h</itemPath>
+      <itemPath>ProjectHeaders/Servo_Hal.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -80,6 +81,7 @@
       <itemPath>ProjectSource/WS2812.c</itemPath>
       <itemPath>ProjectSource/PIC32_AD_Lib.c</itemPath>
       <itemPath>ProjectSource/TestAnalogInputsService.c</itemPath>
+      <itemPath>ProjectSource/Servo_Hal.c</itemPath>
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>

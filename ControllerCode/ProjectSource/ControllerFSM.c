@@ -20,6 +20,7 @@
 #include "NeopixelModule.h"
 #include "DigitalInputService.h"
 #include "dbprintf.h"
+#include "Servo_HAL.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 // Timing and other constants for controller behavior
@@ -32,6 +33,7 @@
 // Team and boat selection constants
 #define BOAT_SELECT_ADC_MAX              1023u
 #define FUEL_FULL_PERCENT                100u
+#define FUEL_SERVO_MAX_ANGLE             180u
 
 // Digital input bit masks for drive packet
 #define SHOOT_DIGI_MASK                  CONTROLLER_COM_BUTTON_SMACK
@@ -52,9 +54,7 @@ static void StopRefuelTimers(void);
 static void RestartPairingTimer(void);
 static void StopPairingTimer(void);
 static void HandleBoatAck(ES_Event_t ThisEvent);
-static void StartContinuousShake(void);
-static void StopContinuousShake(void);
-static void SampleForContinuousShake(void);
+static void UpdateFuelServo(uint8_t fuelPercent);
 static void EnterBoatSelect(void);
 static void EnterPairing(void);
 static void EnterDriving(void);
@@ -88,7 +88,9 @@ bool InitControllerFSM(uint8_t Priority)
   DB_printf("Starting State Machine, in INIT\r\n");
   MyPriority = Priority;
   CurrentState = ControllerInitPState;
+  // Initalize modules used by controller FSM
   NeopixelModule_Init();
+  servoInit();
 
   ThisEvent.EventType = ES_INIT;
   return ES_PostToService(MyPriority, ThisEvent);
@@ -321,8 +323,7 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
 
         case ES_IMU_SHAKE_DETECTED:
           DB_printf("In Refuel -> ES_IMU_SHAKE_DETECTED\r\n");
-          // Start or continue continuous shaking to refuel
-          //StartContinuousShake();
+          // Mark that we saw a shake to send refuel packet  
           SawShakeThisSample = true;
           break;
 
@@ -354,11 +355,11 @@ ES_Event_t RunControllerFSM(ES_Event_t ThisEvent)
             ES_Timer_InitTimer(CONTROLLER_PACKET_TIMER,
                                CONTROLLER_PACKET_PERIOD_MS);
           }
-          else if (ThisEvent.EventParam == CONTROLLER_REFUEL_TIMER)
+          else if (ThisEvent.EventParam == CONTROLLER_REFUEL_TIMER) // Timer for checking for shake
           {
             DB_printf("In Refuel -> ES_TIMEOUT -> CONTROLLER_REFUEL_TIMER\r\n");
-            // Sample for continuous shake to update refuel status and fuel percent
-            SampleForContinuousShake();
+            // Call helper to check if movement was above threshold (i.e shaking)
+            IMUModule_Check4Shake();
             ES_Timer_InitTimer(CONTROLLER_REFUEL_TIMER,
                                CONTROLLER_REFUEL_SAMPLE_MS);
           }
@@ -488,7 +489,6 @@ static void SendDrivePacket(void)
 /* Send a refuel packet to the selected Quackraft only when shaking */
 static void SendRefuelPacket(void)
 {
-  //if (IsShakingContinuously)
   if (SawShakeThisSample)
   {
     ControllerCom_SendCharging(QuackraftAddress);
@@ -538,7 +538,6 @@ static void StopRefuelTimers(void)
   ES_Timer_StopTimer(CONTROLLER_PACKET_TIMER);
   ES_Timer_StopTimer(CONTROLLER_REFUEL_TIMER);
   ES_Timer_StopTimer(CONTROLLER_ACK_TIMER);
-  StopContinuousShake();
 }
 
 /* Restart the pairing timer */
@@ -566,45 +565,40 @@ static void HandleBoatAck(ES_Event_t ThisEvent)
   {
     // Fuel Percent is included in EventParam of ack events, so update fuel percent on each ack
     FuelPercent = (uint8_t)ThisEvent.EventParam;
+    UpdateFuelServo(FuelPercent);
   }
 
   // Restart ack timer on every ack received to monitor connection status
   RestartAckTimer();
 }
 
-/* Start continuous shaking */ 
-static void StartContinuousShake(void)
-{
-  // Variable used to track if controller is being shaken continuously for refueling.
-  IsShakingContinuously = true;
-}
 
-/* Stop continuous shaking */
-static void StopContinuousShake(void)
+/* Update the fuel servo position based on the current fuel percentage */
+static void UpdateFuelServo(uint8_t fuelPercent)
 {
-  // Reset continuous shake tracking variables
-  IsShakingContinuously = false;
-  SawShakeThisSample = false;
-}
+  // Map fuel percentage to servo angle and update servo position
+  uint8_t angle = (fuelPercent * FUEL_SERVO_MAX_ANGLE) / FUEL_FULL_PERCENT;
 
-/* Sample for continuous shake, does this by checking if a shake was detected 
-since the last sample. If shaking continuously, keep the shake state active. 
-If not shaking, reset refuel state. This function should be called on a timer 
-in the refuel state at a rate defined by CONTROLLER_REFUEL_SAMPLE_MS. */
-static void SampleForContinuousShake(void)
-{
-  if (SawShakeThisSample)
-  {
-    //IsShakingContinuously = true;
+  // Map angle to 1 of 5 positions.
+  uint8_t angle_mapped;
+  if (angle <= 20) {
+    angle_mapped = 0;
   }
-  else
-  {
-    //StopContinuousShake();
+  else if (angle <= 40) {
+    angle_mapped = 45;
+  }
+  else if (angle <= 60) {
+    angle_mapped = 90;
+  }
+  else if (angle <= 80) {
+    angle_mapped = 135;
+  }
+  else {
+    angle_mapped = 180;
   }
 
-  //SawShakeThisSample = false;
-
-  IMUModule_Check4Shake();
+  // Call helper in Servo Hal to set angle.
+  servoSetAngle(SERVO_BATTERY, angle_mapped);
 }
 
 // Helpers for transitioning between states, also sets neopixel pattern for each state
@@ -637,3 +631,4 @@ static void EnterRefuel(void)
   CurrentState = Refuel;
   LEDS_Refueling();
 }
+
