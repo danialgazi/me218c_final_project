@@ -76,7 +76,7 @@ static bool RefuelSwitchOn;
 static bool SawShakeThisSample;
 
 // State variables for refueling logic
-static uint8_t FuelPercent;
+static uint16_t FuelPercent;
 
 /*------------------------------ Module Code ------------------------------*/
 
@@ -571,31 +571,31 @@ static void HandleBoatAck(ES_Event_t ThisEvent)
 
 
 /* Update the fuel servo position based on the current fuel percentage */
-static void UpdateFuelServo(uint8_t fuelPercent)
+static void UpdateFuelServo(uint16_t fuelPercent)
 {
   // Map fuel percentage to servo angle and update servo position
-  uint8_t angle = (fuelPercent * FUEL_SERVO_MAX_ANGLE) / FUEL_FULL_PERCENT;
-
+  uint16_t angle = (fuelPercent * FUEL_SERVO_MAX_ANGLE) / FUEL_FULL_PERCENT;
+  DB_printf("angle: %d\r\n", angle);
   // Map angle to 1 of 5 positions.
-  uint8_t angle_mapped;
-  if (angle <= 20) {
-    angle_mapped = 0;
-  }
-  else if (angle <= 40) {
-    angle_mapped = 45;
-  }
-  else if (angle <= 60) {
-    angle_mapped = 90;
-  }
-  else if (angle <= 80) {
-    angle_mapped = 135;
-  }
-  else {
-    angle_mapped = 180;
-  }
-
+//  uint8_t angle_mapped;
+//  if (angle <= 20) {
+//    angle_mapped = 0;
+//  }
+//  else if (angle <= 40) {
+//    angle_mapped = 45;
+//  }
+//  else if (angle <= 60) {
+//    angle_mapped = 90;
+//  }
+//  else if (angle <= 80) {
+//    angle_mapped = 135;
+//  }
+//  else {
+//    angle_mapped = 180;
+//  }
+  
   // Call helper in Servo Hal to set angle.
-  servoSetAngle(SERVO_BATTERY, angle_mapped);
+  servoSetAngle(SERVO_BATTERY, angle);
 }
 
 // Helpers for transitioning between states, also sets neopixel pattern for each state
