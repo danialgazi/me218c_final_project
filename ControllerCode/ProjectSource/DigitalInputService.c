@@ -53,6 +53,8 @@ static bool PairHeld = false;
 
 // Used so multiple CN interrupts during debounce do not restart everything
 static bool Debouncing = false;
+// Remember the refuel switch state at startup; used to invert posted events
+static bool InitialRefuelOn = false;
 
 /*---------------------------- Private Function Prototypes ----------------*/
 
@@ -190,6 +192,7 @@ static void DigitalInput_ReadInitialStates(void)
 
     ShootHeld = (LastStableShoot == INPUT_ACTIVE);
     RefuelOn = (LastStableRefuel == INPUT_ACTIVE);
+    InitialRefuelOn = RefuelOn;
     PairHeld = (LastStablePair == INPUT_ACTIVE);
 }
 
@@ -220,15 +223,16 @@ static void DigitalInput_PostIfChanged(void)
     if (CurrentRefuel != LastStableRefuel)
     {
         LastStableRefuel = CurrentRefuel;
-
-        if (CurrentRefuel == INPUT_ACTIVE)
+        bool newRefuelOn = (CurrentRefuel == INPUT_ACTIVE);
+        RefuelOn = newRefuelOn;
+        // Post ES_REFUEL_SW_ON when the switch is toggled to the opposite
+        // of the initial state at startup; otherwise post ES_REFUEL_SW_OFF.
+        if (newRefuelOn != InitialRefuelOn)
         {
-            RefuelOn = true;
             PostCleanEvent(ES_REFUEL_SW_ON);
         }
         else
         {
-            RefuelOn = false;
             PostCleanEvent(ES_REFUEL_SW_OFF);
         }
     }
